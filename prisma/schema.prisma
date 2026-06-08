@@ -1,0 +1,240 @@
+// Marshmallow CRM — database schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  EMPLOYEE
+}
+
+enum Channel {
+  ONLINE
+  OFFLINE
+}
+
+enum InteractionType {
+  WHATSAPP
+  EMAIL
+  SMS
+  CALL
+  NOTE
+}
+
+// Promotional broadcast channels (1-to-many). WhatsApp stays 1-to-1, not here.
+enum BroadcastChannel {
+  SMS
+  EMAIL
+}
+
+enum BroadcastStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+}
+
+// Pipeline stages a customer moves through.
+enum Stage {
+  NEW_LEAD
+  CONTACTED
+  INTERESTED
+  PURCHASED
+  REPEAT
+  LOST
+}
+
+// What a follow-up step / task is for.
+enum TaskChannel {
+  WHATSAPP
+  EMAIL
+  CALL
+  TASK
+}
+
+enum TaskStatus {
+  PENDING
+  DONE
+  SKIPPED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+// What kicks off an automation.
+enum WorkflowTrigger {
+  CUSTOMER_CREATED // when a new customer is added
+  STAGE_CHANGED    // when a customer moves to a stage
+  BIRTHDAY_SOON    // N days before a customer's birthday
+  NO_CONTACT       // not contacted in N days (win-back)
+}
+
+// What the automation does.
+enum WorkflowAction {
+  ENROLL_SEQUENCE
+  CREATE_TASK
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  role         Role          @default(EMPLOYEE)
+  createdAt    DateTime      @default(now())
+
+  customers    Customer[]    @relation("AssignedCustomers")
+  interactions Interaction[]
+  tasks        Task[]
+}
+
+model Customer {
+  id              String        @id @default(cuid())
+  name            String
+  address         String?
+  favouriteAnime  String?
+  whatsappNumber  String?
+  email           String?
+  productBought   String?
+  channel         Channel       @default(OFFLINE)
+  giftReceived    String?
+  // extra fields requested
+  birthday        DateTime?
+  orderAmount     Float?
+  repeatCustomer  Boolean       @default(false)
+
+  assignedTo      User?         @relation("AssignedCustomers", fields: [assignedToId], references: [id])
+  assignedToId    String?
+
+  stage           Stage         @default(NEW_LEAD)
+  lastContactedAt DateTime?
+  createdAt       DateTime      @default(now())
+
+  interactions    Interaction[]
+  enrollments     Enrollment[]
+  tasks           Task[]
+}
+
+// A reusable follow-up sequence (like a GHL campaign/workflow).
+model Sequence {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  active      Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+
+  steps       SequenceStep[]
+  enrollments Enrollment[]
+}
+
+// One timed step within a sequence.
+model SequenceStep {
+  id         String      @id @default(cuid())
+  sequence   Sequence    @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  sequenceId String
+  order      Int         // 1, 2, 3 …
+  dayOffset  Int         // days after enrollment this step is due
+  channel    TaskChannel @default(WHATSAPP)
+  title      String
+  message    String?     // template, supports {name} {anime} {product}
+
+  tasks      Task[]
+}
+
+// A customer enrolled into a sequence.
+model Enrollment {
+  id         String           @id @default(cuid())
+  customer   Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  sequence   Sequence         @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  sequenceId String
+  status     EnrollmentStatus @default(ACTIVE)
+  startedAt  DateTime         @default(now())
+  workflowId String?          // set if created by an automation
+
+  tasks      Task[]
+}
+
+// A trigger-based automation (GoHighLevel-style workflow).
+model Workflow {
+  id               String          @id @default(cuid())
+  name             String
+  active           Boolean         @default(true)
+  trigger          WorkflowTrigger
+
+  // trigger config (only the relevant one is used)
+  triggerStage     Stage?          // for STAGE_CHANGED (null = any stage)
+  daysBefore       Int?            // for BIRTHDAY_SOON
+  inactivityDays   Int?            // for NO_CONTACT
+
+  // action config
+  action           WorkflowAction
+  actionSequenceId String?         // for ENROLL_SEQUENCE
+  taskChannel      TaskChannel?    // for CREATE_TASK
+  taskTitle        String?
+  taskMessage      String?
+
+  lastRunAt        DateTime?       // for time-based triggers (once-daily guard)
+  createdAt        DateTime        @default(now())
+}
+
+// A promotional broadcast (SMS or Email) — planned/tracked here, sent externally.
+model Broadcast {
+  id                   String           @id @default(cuid())
+  channel              BroadcastChannel
+  name                 String
+  subject              String?          // email only
+  message              String
+  // audience filters (all optional; null = no filter on that field)
+  filterStage          Stage?
+  filterAnime          String?
+  filterPurchaseChannel Channel?
+  filterRepeatOnly     Boolean          @default(false)
+
+  recipientCount       Int              @default(0)
+  status               BroadcastStatus  @default(DRAFT)
+  scheduledFor         DateTime?
+  sentAt               DateTime?
+  createdById          String?
+  createdAt            DateTime         @default(now())
+}
+
+// An actionable follow-up reminder (the thing staff act on each day).
+model Task {
+  id           String        @id @default(cuid())
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId   String
+  enrollment   Enrollment?   @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  enrollmentId String?
+  step         SequenceStep? @relation(fields: [stepId], references: [id], onDelete: SetNull)
+  stepId       String?
+  assignedTo   User?         @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedToId String?
+
+  channel      TaskChannel   @default(TASK)
+  title        String
+  message      String?       // pre-filled message (merge fields already resolved)
+  dueAt        DateTime
+  workflowId   String?       // set if created by an automation
+  status       TaskStatus    @default(PENDING)
+  completedAt  DateTime?
+  createdAt    DateTime      @default(now())
+}
+
+model Interaction {
+  id         String          @id @default(cuid())
+  customer   Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  employee   User?           @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  employeeId String?
+  type       InteractionType @default(NOTE)
+  summary    String
+  createdAt  DateTime        @default(now())
+}
