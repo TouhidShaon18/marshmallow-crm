@@ -125,7 +125,7 @@ export default async function TeamPage() {
                   </div>
                   <TargetCard
                     name={m.name}
-                    target={target ?? { revenueTarget: null, contactTarget: null, newCustomerTarget: null }}
+                    target={target ?? { revenueTarget: null, contactTarget: null, followup7dTarget: null, followup30dTarget: null, convertedSaleTarget: null, repeatSaleTarget: null, newCustomerTarget: null }}
                     actual={actual}
                   />
                 </div>

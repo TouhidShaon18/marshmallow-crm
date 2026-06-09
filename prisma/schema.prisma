@@ -98,16 +98,20 @@ model User {
 
 // Monthly targets set by the owner for each employee.
 model EmployeeTarget {
-  id                String   @id @default(cuid())
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId            String
-  period            String   // "YYYY-MM" e.g. "2026-06"
-  revenueTarget     Float?   // ৳ revenue from new customers added this month
-  contactTarget     Int?     // number of interactions (WhatsApp/calls/emails) logged
-  newCustomerTarget Int?     // number of new customers assigned
+  id                   String   @id @default(cuid())
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               String
+  period               String   // "YYYY-MM" e.g. "2026-06"
+  revenueTarget        Float?   // ৳ total revenue
+  contactTarget        Int?     // total interactions logged
+  followup7dTarget     Int?     // customers followed up within 7 days of creation
+  followup30dTarget    Int?     // customers followed up within 30 days of creation
+  convertedSaleTarget  Int?     // customers with orderAmount > 0 contacted this month
+  repeatSaleTarget     Int?     // repeat customers contacted this month
+  newCustomerTarget    Int?     // new customers added/assigned
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   @@unique([userId, period])
 }

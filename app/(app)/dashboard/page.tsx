@@ -236,8 +236,8 @@ export default async function DashboardPage() {
               <TargetCard
                 key={e.id}
                 name={e.name}
-                target={targetMap[e.id] ?? { revenueTarget: null, contactTarget: null, newCustomerTarget: null }}
-                actual={progressMap[e.id] ?? { revenue: 0, contacts: 0, newCustomers: 0 }}
+                target={targetMap[e.id] ?? { revenueTarget: null, contactTarget: null, followup7dTarget: null, followup30dTarget: null, convertedSaleTarget: null, repeatSaleTarget: null, newCustomerTarget: null }}
+                actual={progressMap[e.id] ?? { revenue: 0, contacts: 0, followup7d: 0, followup30d: 0, convertedSales: 0, repeatSales: 0, newCustomers: 0 }}
               />
             ))}
           </div>
