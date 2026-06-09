@@ -76,8 +76,8 @@ export default async function BroadcastDetailPage({
       {isSMS ? (
         <div className="rounded-lg bg-sky-50 p-4 text-sm text-sky-800">
           📱 <strong>SMS:</strong> Click <em>Send SMS via BulkSMSBD</em> below — the CRM will deliver personalised
-          messages directly to all recipients. Make sure <code className="rounded bg-sky-100 px-1">BULKSMSBD_API_KEY</code> and{" "}
-          <code className="rounded bg-sky-100 px-1">BULKSMSBD_SENDER_ID</code> are set in your Vercel environment variables.
+          messages directly to all recipients. Make sure <code className="rounded bg-sky-100 px-1">BULKSMSBD_API_KEY</code> is
+          set in your Vercel environment variables.
         </div>
       ) : (
         <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
