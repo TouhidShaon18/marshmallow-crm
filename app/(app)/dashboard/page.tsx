@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { runTimeWorkflows } from "@/lib/automation";
 
 function StatCard({ label, value, href }: { label: string; value: number | string; href?: string }) {
   const inner = (
@@ -17,13 +16,6 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) return null;
   const isOwner = user.role === "OWNER";
-
-  // Auto-run time-based automations (birthday / win-back) at most once per day.
-  try {
-    await runTimeWorkflows();
-  } catch (e) {
-    console.error("runTimeWorkflows failed:", e);
-  }
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000);
   const followupWhere = {
