@@ -22,12 +22,6 @@ export default async function LoginPage() {
         <div className="card p-6">
           <LoginForm />
         </div>
-
-        <div className="mt-6 rounded-lg bg-brand-100/60 p-4 text-xs text-brand-800">
-          <p className="font-semibold">Demo logins</p>
-          <p className="mt-1">Owner — owner@marshmallow.crm / owner123</p>
-          <p>Employee — employee@marshmallow.crm / staff123</p>
-        </div>
       </div>
     </div>
   );
