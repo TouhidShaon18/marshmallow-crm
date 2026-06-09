@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { markBroadcastSent, deleteBroadcast } from "@/app/broadcast-actions";
 import { audienceWhere, mergeMessage, audienceSummary } from "@/lib/audience";
 import { STAGE_LABEL, type StageKey } from "@/lib/labels";
+import SendSmsForm from "@/components/send-sms-form";
 
 export default async function BroadcastDetailPage({
   params,
@@ -72,21 +73,32 @@ export default async function BroadcastDetailPage({
       </div>
 
       {/* How to send */}
-      <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
-        📤 <strong>To send:</strong> click <em>Export recipients</em> to download the list
-        ({isSMS ? "names + phone numbers" : "names + emails"} + each person&apos;s personalised message),
-        upload it to your {isSMS ? "bulk SMS" : "email"} tool, send, then come back and mark it sent below.
-      </div>
+      {isSMS ? (
+        <div className="rounded-lg bg-sky-50 p-4 text-sm text-sky-800">
+          📱 <strong>SMS:</strong> Click <em>Send SMS via BulkSMSBD</em> below — the CRM will deliver personalised
+          messages directly to all recipients. Make sure <code className="rounded bg-sky-100 px-1">BULKSMSBD_API_KEY</code> and{" "}
+          <code className="rounded bg-sky-100 px-1">BULKSMSBD_SENDER_ID</code> are set in your Vercel environment variables.
+        </div>
+      ) : (
+        <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
+          📤 <strong>Email:</strong> click <em>Export recipients</em> to download names + emails + personalised messages,
+          upload to your email tool, send, then come back and mark it sent below.
+        </div>
+      )}
 
-      {/* Mark sent */}
+      {/* Send / Mark sent */}
       {b.status !== "SENT" ? (
-        <form action={markSent} className="card flex flex-wrap items-center justify-between gap-3 p-4">
-          <label className="flex items-center gap-2 text-sm text-brand-900">
-            <input type="checkbox" name="logToTimeline" defaultChecked className="h-4 w-4 rounded border-brand-300 text-brand-600" />
-            Log this on each recipient&apos;s timeline
-          </label>
-          <button type="submit" className="btn-primary">✓ Mark as sent</button>
-        </form>
+        isSMS ? (
+          <SendSmsForm broadcastId={b.id} />
+        ) : (
+          <form action={markSent} className="card flex flex-wrap items-center justify-between gap-3 p-4">
+            <label className="flex items-center gap-2 text-sm text-brand-900">
+              <input type="checkbox" name="logToTimeline" defaultChecked className="h-4 w-4 rounded border-brand-300 text-brand-600" />
+              Log this on each recipient&apos;s timeline
+            </label>
+            <button type="submit" className="btn-primary">✓ Mark as sent</button>
+          </form>
+        )
       ) : (
         <div className="card p-4 text-sm text-green-700">
           ✓ Sent on {b.sentAt ? new Date(b.sentAt).toLocaleString("en-GB") : ""} to {b.recipientCount} recipients.
