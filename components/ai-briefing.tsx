@@ -4,7 +4,7 @@ import { getDashboardBriefing } from "@/lib/ai";
 // Async server component — rendered inside a <Suspense> on the dashboard.
 // Returns null (renders nothing) when ANTHROPIC_API_KEY is not set.
 export default async function AiBriefing() {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
+  if (!process.env.OPENAI_API_KEY) return null;
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000);
   const sevenDaysFromNow = new Date(Date.now() + 7 * 86_400_000);

@@ -4,7 +4,7 @@ import { getCustomerInsight } from "@/lib/ai";
 // Async server component — rendered inside a <Suspense> on the customer detail page.
 // Returns null when ANTHROPIC_API_KEY is not set.
 export default async function CustomerInsight({ customerId }: { customerId: string }) {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
+  if (!process.env.OPENAI_API_KEY) return null;
 
   const customer = await prisma.customer.findUnique({
     where: { id: customerId },

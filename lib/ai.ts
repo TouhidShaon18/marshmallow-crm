@@ -1,24 +1,24 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { unstable_cache } from "next/cache";
 
-const MODEL = "claude-3-5-haiku-20241022";
+const MODEL = "gpt-4o-mini";
 
 function getClient() {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
-  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  if (!process.env.OPENAI_API_KEY) return null;
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 }
 
 async function ask(prompt: string): Promise<string | null> {
   const client = getClient();
   if (!client) return null;
   try {
-    const msg = await client.messages.create({
+    const res = await client.chat.completions.create({
       model: MODEL,
       max_tokens: 180,
       messages: [{ role: "user", content: prompt }],
     });
-    return msg.content[0].type === "text" ? msg.content[0].text.trim() : null;
+    return res.choices[0]?.message?.content?.trim() ?? null;
   } catch (e) {
     console.error("[AI] Error:", e);
     return null;
@@ -32,7 +32,7 @@ export type DashboardData = {
   followupDue: number;
   tasksDue: number;
   contactedThisWeek: number;
-  birthdaysSoon: string[]; // customer names
+  birthdaysSoon: string[];
 };
 
 async function _getDashboardBriefing(data: DashboardData): Promise<string | null> {
@@ -57,7 +57,6 @@ No bullet points — natural sentences only.`,
   );
 }
 
-// Cache per date string so it refreshes each day (max once per hour in between)
 export const getDashboardBriefing = unstable_cache(
   _getDashboardBriefing,
   ["dashboard-briefing"],
@@ -106,10 +105,7 @@ Reference their anime interest or purchase if relevant. Be friendly and specific
   );
 }
 
-// Cache per customer + last-contact timestamp (refreshes when customer is updated)
-export function getCustomerInsight(
-  data: CustomerInsightData,
-): Promise<string | null> {
+export function getCustomerInsight(data: CustomerInsightData): Promise<string | null> {
   const cacheKey = `customer-insight-${data.name}-${data.lastContactedAt?.toISOString() ?? "never"}`;
   return unstable_cache(_getCustomerInsight, [cacheKey], { revalidate: 7200 })(data);
 }
