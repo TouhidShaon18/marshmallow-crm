@@ -1,7 +1,7 @@
 import "server-only";
 
 const API_KEY = process.env.BULKSMSBD_API_KEY;
-const SENDER_ID = process.env.BULKSMSBD_SENDER_ID; // optional — only needed for masking SMS
+const SENDER_ID = process.env.BULKSMSBD_SENDER_ID; // required — your BulkSMSBD sender ID (numeric for non-masking, text for masking)
 
 export type SmsResult = {
   ok: boolean;
@@ -36,8 +36,8 @@ export async function sendBulkSMS(
     return { ok: true, mode: "sent", submitted: 0, failed: 0 };
   }
 
-  if (!API_KEY) {
-    console.log(`\n📱 [SMS console mode — BULKSMSBD_API_KEY not set]`);
+  if (!API_KEY || !SENDER_ID) {
+    console.log(`\n📱 [SMS console mode — BULKSMSBD_API_KEY or BULKSMSBD_SENDER_ID not set]`);
     for (const r of recipients) {
       console.log(`   To: ${r.number}  →  ${r.message}`);
     }
@@ -58,15 +58,13 @@ export async function sendBulkSMS(
 
   for (const [message, numbers] of byMessage) {
     try {
-      // BulkSMSBD expects form-encoded data (not JSON)
+      // BulkSMSBD expects form-encoded POST with exactly these 4 fields
       const payload = new URLSearchParams({
         api_key: API_KEY,
+        senderid: SENDER_ID,
         number: numbers.join(","),
         message,
-        type: "text",
       });
-      // Only include senderid for masking SMS (when explicitly configured)
-      if (SENDER_ID) payload.set("senderid", SENDER_ID);
 
       const res = await fetch("https://bulksmsbd.net/api/smsapi", {
         method: "POST",
