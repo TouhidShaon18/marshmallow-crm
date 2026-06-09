@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { logout } from "@/app/actions";
 import Sidebar from "@/components/sidebar";
+import MobileMenu from "@/components/mobile-menu";
 
 export default async function AppLayout({
   children,
@@ -15,9 +16,10 @@ export default async function AppLayout({
     <div className="flex flex-1">
       <Sidebar role={user.role} />
       <div className="flex flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-brand-100 bg-white px-6 py-3">
-          <div className="text-sm text-brand-700/70 md:hidden font-semibold">
-            🍡 Marshmallow CRM
+        <header className="flex items-center justify-between border-b border-brand-100 bg-white px-4 py-3">
+          <div className="flex items-center gap-2 md:hidden">
+            <MobileMenu role={user.role} />
+            <span className="text-sm font-semibold text-brand-900">🍡 Marshmallow CRM</span>
           </div>
           <div className="ml-auto flex items-center gap-3">
             <div className="text-right">
