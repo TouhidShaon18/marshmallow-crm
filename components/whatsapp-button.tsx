@@ -16,8 +16,9 @@ export default function WhatsAppButton({
   }
 
   const digits = number.replace(/[^0-9]/g, "");
+  const normalized = digits.startsWith("88") ? digits : `88${digits}`;
   const text = encodeURIComponent(`Hi ${name}, this is your anime store 🍡`);
-  const url = `https://wa.me/${digits}?text=${text}`;
+  const url = `https://wa.me/${normalized}?text=${text}`;
 
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" className="btn-primary bg-green-600 hover:bg-green-700">

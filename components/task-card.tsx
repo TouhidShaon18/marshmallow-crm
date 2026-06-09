@@ -34,8 +34,9 @@ export default function TaskCard({ task }: { task: TaskCardData }) {
   const snooze3 = snoozeTask.bind(null, task.id, 3);
 
   const digits = task.customer.whatsappNumber?.replace(/[^0-9]/g, "");
-  const waUrl = digits
-    ? `https://wa.me/${digits}?text=${encodeURIComponent(task.message ?? "")}`
+  const normalized = digits ? (digits.startsWith("88") ? digits : `88${digits}`) : null;
+  const waUrl = normalized
+    ? `https://wa.me/${normalized}?text=${encodeURIComponent(task.message ?? "")}`
     : null;
   const mailUrl = task.customer.email
     ? `mailto:${task.customer.email}?subject=${encodeURIComponent(task.title)}&body=${encodeURIComponent(task.message ?? "")}`
