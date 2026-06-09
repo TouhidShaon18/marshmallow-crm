@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import AiBriefing, { AiBriefingSkeleton } from "@/components/ai-briefing";
 
 function StatCard({ label, value, href }: { label: string; value: number | string; href?: string }) {
   const inner = (
@@ -85,6 +87,10 @@ export default async function DashboardPage() {
           {isOwner ? "Everything across your store at a glance." : "Here's what needs your attention today."}
         </p>
       </div>
+
+      <Suspense fallback={<AiBriefingSkeleton />}>
+        <AiBriefing />
+      </Suspense>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total customers" value={totalCustomers} href="/customers" />

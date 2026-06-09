@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -6,6 +7,7 @@ import { enrollCustomer, cancelEnrollment } from "@/app/followup-actions";
 import WhatsAppButton from "@/components/whatsapp-button";
 import NoteForm from "@/components/note-form";
 import EmailComposer from "@/components/email-composer";
+import CustomerInsight, { CustomerInsightSkeleton } from "@/components/customer-insight";
 import { STAGE_LABEL, STAGE_COLOR, CHANNEL_ICON, type StageKey, type ChannelKey } from "@/lib/labels";
 
 const typeStyle: Record<string, string> = {
@@ -96,6 +98,10 @@ export default async function CustomerDetailPage({
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left column: details + actions */}
         <div className="space-y-6 lg:col-span-1">
+          <Suspense fallback={<CustomerInsightSkeleton />}>
+            <CustomerInsight customerId={id} />
+          </Suspense>
+
           <div className="card p-6">
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-700/70">Details</h2>
             <dl className="grid grid-cols-2 gap-4">
