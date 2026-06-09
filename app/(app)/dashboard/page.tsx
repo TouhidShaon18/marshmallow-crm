@@ -3,6 +3,13 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import AiBriefing, { AiBriefingSkeleton } from "@/components/ai-briefing";
+import { TargetCard } from "@/components/target-progress";
+import { getTargetProgress } from "@/app/target-actions";
+
+function currentPeriod() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
 
 function StatCard({ label, value, href }: { label: string; value: number | string; href?: string }) {
   const inner = (
@@ -18,6 +25,7 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) return null;
   const isOwner = user.role === "OWNER";
+  const period = currentPeriod();
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000);
   const followupWhere = {
@@ -44,20 +52,17 @@ export default async function DashboardPage() {
       }),
     ]);
 
-  // Owner-only: activity per team member.
+  // ── Owner-only data ──────────────────────────────────────────────────────
   const team = isOwner
     ? await prisma.user.findMany({
         orderBy: { name: "asc" },
         select: {
-          id: true,
-          name: true,
-          role: true,
+          id: true, name: true, role: true,
           _count: { select: { customers: true } },
         },
       })
     : [];
 
-  // Per-employee activity this week, split by channel (WhatsApp is the main one).
   const weeklyByEmployee = isOwner
     ? await prisma.interaction.groupBy({
         by: ["employeeId", "type"],
@@ -76,6 +81,30 @@ export default async function DashboardPage() {
     weeklyMap.set(w.employeeId, c);
   }
   const emptyCounts: ChannelCounts = { whatsapp: 0, sms: 0, email: 0 };
+
+  // Team targets (owner sees all employees; employee sees only self)
+  const employees = isOwner
+    ? team.filter((t) => t.role === "EMPLOYEE")
+    : [];
+
+  const employeeTargets = isOwner
+    ? await prisma.employeeTarget.findMany({
+        where: { period, userId: { in: employees.map((e) => e.id) } },
+      })
+    : [];
+
+  const targetMap = Object.fromEntries(employeeTargets.map((t) => [t.userId, t]));
+  const progressMap = isOwner
+    ? Object.fromEntries(
+        await Promise.all(employees.map(async (e) => [e.id, await getTargetProgress(e.id, period)]))
+      )
+    : {};
+
+  // Employee's own target
+  const myTarget = !isOwner
+    ? await prisma.employeeTarget.findUnique({ where: { userId_period: { userId: user.id, period } } })
+    : null;
+  const myProgress = !isOwner ? await getTargetProgress(user.id, period) : null;
 
   return (
     <div className="space-y-8">
@@ -98,6 +127,20 @@ export default async function DashboardPage() {
         <StatCard label="Follow-ups due" value={followupCount} href="/followups" />
         <StatCard label="Contacts this week" value={contactedThisWeek} />
       </div>
+
+      {/* Employee: own target progress */}
+      {!isOwner && myTarget && myProgress && (
+        <div className="card p-6 space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-700/70">
+            Your target — {period}
+          </h2>
+          <TargetCard
+            name={user.name}
+            target={myTarget}
+            actual={myProgress}
+          />
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent activity */}
@@ -176,6 +219,30 @@ export default async function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Owner: team targets this month */}
+      {isOwner && employees.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-brand-900">
+              Team targets — {period}
+            </h2>
+            <Link href="/team" className="text-sm text-brand-600 hover:underline">
+              Edit targets →
+            </Link>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {employees.map((e) => (
+              <TargetCard
+                key={e.id}
+                name={e.name}
+                target={targetMap[e.id] ?? { revenueTarget: null, contactTarget: null, newCustomerTarget: null }}
+                actual={progressMap[e.id] ?? { revenue: 0, contacts: 0, newCustomers: 0 }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

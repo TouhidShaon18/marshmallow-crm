@@ -83,16 +83,33 @@ enum WorkflowAction {
 }
 
 model User {
-  id           String        @id @default(cuid())
+  id           String           @id @default(cuid())
   name         String
-  email        String        @unique
+  email        String           @unique
   passwordHash String
-  role         Role          @default(EMPLOYEE)
-  createdAt    DateTime      @default(now())
+  role         Role             @default(EMPLOYEE)
+  createdAt    DateTime         @default(now())
 
-  customers    Customer[]    @relation("AssignedCustomers")
+  customers    Customer[]       @relation("AssignedCustomers")
   interactions Interaction[]
   tasks        Task[]
+  targets      EmployeeTarget[]
+}
+
+// Monthly targets set by the owner for each employee.
+model EmployeeTarget {
+  id                String   @id @default(cuid())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String
+  period            String   // "YYYY-MM" e.g. "2026-06"
+  revenueTarget     Float?   // ৳ revenue from new customers added this month
+  contactTarget     Int?     // number of interactions (WhatsApp/calls/emails) logged
+  newCustomerTarget Int?     // number of new customers assigned
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([userId, period])
 }
 
 model Customer {
