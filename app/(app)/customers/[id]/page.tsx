@@ -8,6 +8,7 @@ import WhatsAppButton from "@/components/whatsapp-button";
 import NoteForm from "@/components/note-form";
 import EmailComposer from "@/components/email-composer";
 import CustomerInsight, { CustomerInsightSkeleton } from "@/components/customer-insight";
+import CustomerTags from "@/components/customer-tags";
 import { STAGE_LABEL, STAGE_COLOR, CHANNEL_ICON, type StageKey, type ChannelKey } from "@/lib/labels";
 
 const typeStyle: Record<string, string> = {
@@ -42,7 +43,7 @@ export default async function CustomerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [customer, activeSequences] = await Promise.all([
+  const [customer, activeSequences, allTags] = await Promise.all([
     prisma.customer.findUnique({
       where: { id },
       include: {
@@ -59,6 +60,7 @@ export default async function CustomerDetailPage({
           where: { status: "PENDING" },
           orderBy: { dueAt: "asc" },
         },
+        tags: { select: { id: true, name: true, color: true } },
       },
     }),
     prisma.sequence.findMany({
@@ -66,6 +68,7 @@ export default async function CustomerDetailPage({
       select: { id: true, name: true, _count: { select: { steps: true } } },
       orderBy: { name: "asc" },
     }),
+    prisma.tag.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, color: true } }),
   ]);
   if (!customer) notFound();
 
@@ -101,6 +104,15 @@ export default async function CustomerDetailPage({
           <Suspense fallback={<CustomerInsightSkeleton />}>
             <CustomerInsight customerId={id} />
           </Suspense>
+
+          <div className="card p-5">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-brand-700/70">Tags</h2>
+            <CustomerTags
+              customerId={id}
+              customerTags={customer.tags}
+              allTags={allTags}
+            />
+          </div>
 
           <div className="card p-6">
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-700/70">Details</h2>

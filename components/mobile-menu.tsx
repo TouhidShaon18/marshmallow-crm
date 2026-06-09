@@ -13,6 +13,7 @@ const links = [
   { href: "/automations", label: "Automations", icon: "⚡" },
   { href: "/broadcasts", label: "Promotions", icon: "📣" },
   { href: "/followups", label: "Follow-ups", icon: "⏰" },
+  { href: "/tags", label: "Tags", icon: "🏷️" },
 ];
 
 export default function MobileMenu({ role }: { role: "OWNER" | "EMPLOYEE" }) {

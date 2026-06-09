@@ -40,9 +40,10 @@ export async function createBroadcast(
   const filterPurchaseChannel = pcRaw === "ONLINE" || pcRaw === "OFFLINE" ? pcRaw : null;
   const filterAnime = str(formData, "filterAnime");
   const filterRepeatOnly = formData.get("filterRepeatOnly") != null;
+  const filterTagId = str(formData, "filterTagId");
 
   const count = await prisma.customer.count({
-    where: audienceWhere({ channel, filterStage, filterAnime, filterPurchaseChannel, filterRepeatOnly }),
+    where: audienceWhere({ channel, filterStage, filterAnime, filterPurchaseChannel, filterRepeatOnly, filterTagId }),
   });
 
   const b = await prisma.broadcast.create({
@@ -57,6 +58,7 @@ export async function createBroadcast(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       filterPurchaseChannel: filterPurchaseChannel as any,
       filterRepeatOnly,
+      filterTagId,
       recipientCount: count,
       createdById: user.id,
     },
@@ -96,6 +98,7 @@ export async function sendBroadcastSMS(
     filterAnime: b.filterAnime,
     filterPurchaseChannel: b.filterPurchaseChannel,
     filterRepeatOnly: b.filterRepeatOnly,
+    filterTagId: b.filterTagId,
   });
 
   const customers = await prisma.customer.findMany({
@@ -156,6 +159,7 @@ export async function markBroadcastSent(id: string, formData: FormData): Promise
     filterAnime: b.filterAnime,
     filterPurchaseChannel: b.filterPurchaseChannel,
     filterRepeatOnly: b.filterRepeatOnly,
+    filterTagId: b.filterTagId,
   });
 
   const logToTimeline = formData.get("logToTimeline") != null;

@@ -120,6 +120,16 @@ model Customer {
   interactions    Interaction[]
   enrollments     Enrollment[]
   tasks           Task[]
+  tags            Tag[]
+}
+
+// GHL-style customer tags (many-to-many).
+model Tag {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  color     String     @default("purple")
+  createdAt DateTime   @default(now())
+  customers Customer[]
 }
 
 // A reusable follow-up sequence (like a GHL campaign/workflow).
@@ -197,6 +207,7 @@ model Broadcast {
   filterAnime          String?
   filterPurchaseChannel Channel?
   filterRepeatOnly     Boolean          @default(false)
+  filterTagId          String?
 
   recipientCount       Int              @default(0)
   status               BroadcastStatus  @default(DRAFT)

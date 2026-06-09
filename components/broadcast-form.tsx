@@ -4,7 +4,9 @@ import { useActionState, useState } from "react";
 import { createBroadcast } from "@/app/broadcast-actions";
 import { STAGES, STAGE_LABEL } from "@/lib/labels";
 
-export default function BroadcastForm() {
+type Tag = { id: string; name: string };
+
+export default function BroadcastForm({ tags }: { tags: Tag[] }) {
   const [state, action, pending] = useActionState(createBroadcast, {});
   const [channel, setChannel] = useState<"SMS" | "EMAIL">("SMS");
 
@@ -82,6 +84,17 @@ export default function BroadcastForm() {
               Repeat customers only
             </label>
           </div>
+          {tags.length > 0 && (
+            <div>
+              <label className="label" htmlFor="filterTagId">Has tag</label>
+              <select id="filterTagId" name="filterTagId" className="input" defaultValue="">
+                <option value="">Any tag</option>
+                {tags.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
