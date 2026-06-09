@@ -41,7 +41,8 @@ export async function login(
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
     return { error: "Wrong email or password." };
   }
-  await createSession(user.id);
+  const rememberMe = formData.get("rememberMe") != null;
+  await createSession(user.id, rememberMe);
   redirect("/dashboard");
 }
 

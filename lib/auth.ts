@@ -25,11 +25,14 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
 }
 
 // Create a signed session cookie for the given user id.
-export async function createSession(userId: string): Promise<void> {
+// rememberMe=true  → 30-day persistent cookie (survives browser close)
+// rememberMe=false → session cookie with 24h JWT (expires when browser closes)
+export async function createSession(userId: string, rememberMe = true): Promise<void> {
+  const expiry = rememberMe ? "30d" : "1d";
   const token = await new SignJWT({ uid: userId })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("30d")
+    .setExpirationTime(expiry)
     .sign(secret);
 
   const store = await cookies();
@@ -38,7 +41,8 @@ export async function createSession(userId: string): Promise<void> {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30,
+    // No maxAge when not remembered → browser session cookie
+    ...(rememberMe ? { maxAge: 60 * 60 * 24 * 30 } : {}),
   });
 }
 
