@@ -58,19 +58,20 @@ export async function sendBulkSMS(
 
   for (const [message, numbers] of byMessage) {
     try {
-      const payload: Record<string, string> = {
+      // BulkSMSBD expects form-encoded data (not JSON)
+      const payload = new URLSearchParams({
         api_key: API_KEY,
         number: numbers.join(","),
         message,
         type: "text",
-      };
+      });
       // Only include senderid for masking SMS (when explicitly configured)
-      if (SENDER_ID) payload.senderid = SENDER_ID;
+      if (SENDER_ID) payload.set("senderid", SENDER_ID);
 
       const res = await fetch("https://bulksmsbd.net/api/smsapi", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: payload.toString(),
       });
 
       const data = (await res.json()) as {
