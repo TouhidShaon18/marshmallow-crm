@@ -17,10 +17,11 @@ const SALES_LINKS: NavItem[] = [
 ];
 
 const MARKETING_LINKS: NavItem[] = [
-  { href: "/marketing",   label: "Marketing Hub", icon: "🎯" },
-  { href: "/broadcasts",  label: "Broadcasts",    icon: "📣" },
-  { href: "/campaigns",   label: "Campaigns",     icon: "🚀" },
-  { href: "/automations", label: "Automations",   icon: "⚡" },
+  { href: "/marketing",        label: "Marketing Hub",  icon: "🎯" },
+  { href: "/social-planner",   label: "Social Planner", icon: "📅" },
+  { href: "/broadcasts",       label: "Broadcasts",     icon: "📣" },
+  { href: "/campaigns",        label: "Campaigns",      icon: "🚀" },
+  { href: "/automations",      label: "Automations",    icon: "⚡" },
 ];
 
 const MGMT_LINKS: NavItem[] = [

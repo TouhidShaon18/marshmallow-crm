@@ -70,6 +70,25 @@ enum EnrollmentStatus {
   CANCELLED
 }
 
+// Social media channels for the planner.
+enum SocialChannel {
+  FACEBOOK
+  INSTAGRAM
+  YOUTUBE
+  GMB
+  REDDIT
+  PINTEREST
+  TIKTOK
+  BLOG
+}
+
+// Lifecycle of a planned social post.
+enum PostStatus {
+  PLANNED
+  POSTED
+  METRICS_LOGGED
+}
+
 // What kicks off an automation.
 enum WorkflowTrigger {
   CUSTOMER_CREATED // when a new customer is added
@@ -92,10 +111,12 @@ model User {
   role         Role             @default(EMPLOYEE)
   createdAt    DateTime         @default(now())
 
-  customers    Customer[]       @relation("AssignedCustomers")
-  interactions Interaction[]
-  tasks        Task[]
-  targets      EmployeeTarget[]
+  customers        Customer[]        @relation("AssignedCustomers")
+  interactions     Interaction[]
+  tasks            Task[]
+  targets          EmployeeTarget[]
+  socialTemplates  SocialTemplate[]
+  socialPosts      SocialPost[]
 }
 
 // Monthly targets set by the owner for each employee.
@@ -273,6 +294,54 @@ model Interaction {
   type       InteractionType @default(NOTE)
   summary    String
   createdAt  DateTime        @default(now())
+}
+
+// Recurring social post template — defines what to post, where, and which day each month.
+model SocialTemplate {
+  id           String        @id @default(cuid())
+  channel      SocialChannel
+  topic        String        // post idea / content theme
+  notes        String?       // caption hints, hashtags, etc.
+  dayOfMonth   Int           // 1–28 (safe for all months)
+  assignedTo   User?         @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedToId String?
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  posts        SocialPost[]
+}
+
+// One instance of a planned post for a specific month.
+model SocialPost {
+  id            String          @id @default(cuid())
+  template      SocialTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  templateId    String?
+
+  channel       SocialChannel
+  topic         String
+  notes         String?
+  period        String          // "YYYY-MM"
+  scheduledDate DateTime
+
+  assignedTo    User?           @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedToId  String?
+
+  // Post log
+  status        PostStatus      @default(PLANNED)
+  postedAt      DateTime?
+  postUrl       String?
+
+  // Performance metrics
+  reactCount    Int?
+  viewCount     Int?
+  commentCount  Int?
+  shareCount    Int?
+  metricsLoggedAt         DateTime?
+  metricsReminderSentAt   DateTime? // set by cron 3 days after posting
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 }
 
 // Marketing campaign tracker.

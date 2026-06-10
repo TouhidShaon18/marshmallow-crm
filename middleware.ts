@@ -24,6 +24,7 @@ const MARKETING_ONLY = [
   "/broadcasts",
   "/campaigns",
   "/automations",
+  "/social-planner",
 ];
 
 function matchesAny(pathname: string, prefixes: string[]) {

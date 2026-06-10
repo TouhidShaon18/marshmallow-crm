@@ -1,0 +1,86 @@
+"use client";
+
+import { useActionState, useEffect, useRef } from "react";
+import { createTemplate } from "@/app/social-actions";
+import { ALL_CHANNELS, CHANNEL_CONFIG } from "@/lib/social";
+
+type Employee = { id: string; name: string };
+
+export default function CreateTemplateForm({ employees }: { employees: Employee[] }) {
+  const [state, action, pending] = useActionState(createTemplate, undefined);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (state?.ok) formRef.current?.reset();
+  }, [state?.ok]);
+
+  return (
+    <form ref={formRef} action={action} className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="label">Channel *</label>
+          <select name="channel" required className="input" defaultValue="">
+            <option value="" disabled>— Select —</option>
+            {ALL_CHANNELS.map((ch) => {
+              const c = CHANNEL_CONFIG[ch];
+              return (
+                <option key={ch} value={ch}>
+                  {c.icon} {c.label}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+        <div>
+          <label className="label">Day of month (1–28) *</label>
+          <input
+            name="dayOfMonth"
+            type="number"
+            min="1"
+            max="28"
+            required
+            className="input"
+            placeholder="e.g. 5"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="label">Topic / content idea *</label>
+          <input name="topic" required className="input" placeholder="e.g. New arrival product showcase" />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="label">Notes / caption hints</label>
+          <textarea
+            name="notes"
+            rows={2}
+            className="input resize-none"
+            placeholder="Hashtags, tone, image ideas…"
+          />
+        </div>
+        {employees.length > 0 && (
+          <div className="sm:col-span-2">
+            <label className="label">Assign to</label>
+            <select name="assignedToId" className="input" defaultValue="">
+              <option value="">— Unassigned —</option>
+              {employees.map((e) => (
+                <option key={e.id} value={e.id}>{e.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {state?.error && (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{state.error}</p>
+      )}
+      {state?.ok && (
+        <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+          Template saved! It will appear every month when you generate the plan.
+        </p>
+      )}
+
+      <button type="submit" disabled={pending} className="btn-primary">
+        {pending ? "Saving…" : "Add recurring post"}
+      </button>
+    </form>
+  );
+}
