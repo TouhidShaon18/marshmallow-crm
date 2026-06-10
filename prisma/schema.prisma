@@ -80,6 +80,9 @@ enum SocialChannel {
   PINTEREST
   TIKTOK
   BLOG
+  EMAIL
+  SMS
+  INFLUENCER
 }
 
 // Lifecycle of a planned social post.

@@ -1,14 +1,17 @@
 // Shared config for social channels — used by pages and components.
 
 export const CHANNEL_CONFIG = {
-  FACEBOOK:  { label: "Facebook",   icon: "👍", color: "bg-blue-100  text-blue-700"   },
-  INSTAGRAM: { label: "Instagram",  icon: "📸", color: "bg-pink-100  text-pink-700"   },
-  YOUTUBE:   { label: "YouTube",    icon: "▶️",  color: "bg-red-100   text-red-700"    },
-  GMB:       { label: "GMB",        icon: "🗺️",  color: "bg-green-100 text-green-700"  },
-  REDDIT:    { label: "Reddit",     icon: "🔴", color: "bg-orange-100 text-orange-700" },
-  PINTEREST: { label: "Pinterest",  icon: "📌", color: "bg-rose-100  text-rose-700"   },
-  TIKTOK:    { label: "TikTok",     icon: "🎵", color: "bg-gray-100  text-gray-700"   },
-  BLOG:      { label: "Blog",       icon: "✍️",  color: "bg-amber-100 text-amber-700"  },
+  FACEBOOK:   { label: "Facebook",            icon: "👍", color: "bg-blue-100   text-blue-700"   },
+  INSTAGRAM:  { label: "Instagram",           icon: "📸", color: "bg-pink-100   text-pink-700"   },
+  YOUTUBE:    { label: "YouTube",             icon: "▶️",  color: "bg-red-100    text-red-700"    },
+  GMB:        { label: "GMB",                 icon: "🗺️",  color: "bg-green-100  text-green-700"  },
+  REDDIT:     { label: "Reddit",              icon: "🔴", color: "bg-orange-100 text-orange-700" },
+  PINTEREST:  { label: "Pinterest",           icon: "📌", color: "bg-rose-100   text-rose-700"   },
+  TIKTOK:     { label: "TikTok",              icon: "🎵", color: "bg-gray-100   text-gray-700"   },
+  BLOG:       { label: "Blog",                icon: "✍️",  color: "bg-amber-100  text-amber-700"  },
+  EMAIL:      { label: "Email",               icon: "📧", color: "bg-sky-100    text-sky-700"    },
+  SMS:        { label: "SMS",                 icon: "💬", color: "bg-lime-100   text-lime-700"   },
+  INFLUENCER: { label: "Influencer",          icon: "🌟", color: "bg-purple-100 text-purple-700" },
 } as const;
 
 export type SocialChannelKey = keyof typeof CHANNEL_CONFIG;
