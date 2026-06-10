@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, normaliseRole, isMarketingRole } from "@/lib/auth";
 import AiBriefing, { AiBriefingSkeleton } from "@/components/ai-briefing";
-import { TargetCard } from "@/components/target-progress";
-import { getTargetProgress } from "@/app/target-actions";
+import { TargetCard, MarketingTargetCard } from "@/components/target-progress";
+import { getTargetProgress, getMarketingProgress } from "@/app/target-actions";
 
 function currentPeriod() {
   const now = new Date();
@@ -82,7 +82,7 @@ export default async function DashboardPage() {
   }
   const emptyCounts: ChannelCounts = { whatsapp: 0, sms: 0, email: 0 };
 
-  // Team targets (owner sees all employees; employee sees only self)
+  // Team targets (owner sees all employees)
   const employees = isOwner
     ? team.filter((t) => t.role === "EMPLOYEE" || t.role === "SALES" || t.role === "MARKETING")
     : [];
@@ -94,17 +94,30 @@ export default async function DashboardPage() {
     : [];
 
   const targetMap = Object.fromEntries(employeeTargets.map((t) => [t.userId, t]));
-  const progressMap = isOwner
-    ? Object.fromEntries(
-        await Promise.all(employees.map(async (e) => [e.id, await getTargetProgress(e.id, period)]))
-      )
-    : {};
+
+  // Fetch progress per employee (sales vs marketing)
+  const salesProgressMap: Record<string, Awaited<ReturnType<typeof getTargetProgress>>> = {};
+  const mktProgressMap: Record<string, Awaited<ReturnType<typeof getMarketingProgress>>> = {};
+
+  if (isOwner) {
+    await Promise.all(
+      employees.map(async (e) => {
+        const role = normaliseRole(e.role);
+        if (isMarketingRole(role)) {
+          mktProgressMap[e.id] = await getMarketingProgress(e.id, period);
+        } else {
+          salesProgressMap[e.id] = await getTargetProgress(e.id, period);
+        }
+      }),
+    );
+  }
 
   // Employee's own target
-  const myTarget = !isOwner
-    ? await prisma.employeeTarget.findUnique({ where: { userId_period: { userId: user.id, period } } })
-    : null;
-  const myProgress = !isOwner ? await getTargetProgress(user.id, period) : null;
+  const myRole     = normaliseRole(user.role);
+  const myIsMkt    = isMarketingRole(myRole);
+  const myTarget   = !isOwner ? await prisma.employeeTarget.findUnique({ where: { userId_period: { userId: user.id, period } } }) : null;
+  const myProgress = !isOwner && !myIsMkt ? await getTargetProgress(user.id, period) : null;
+  const myMktProgress = !isOwner && myIsMkt ? await getMarketingProgress(user.id, period) : null;
 
   return (
     <div className="space-y-8">
@@ -129,16 +142,16 @@ export default async function DashboardPage() {
       </div>
 
       {/* Employee: own target progress */}
-      {!isOwner && myTarget && myProgress && (
+      {!isOwner && myTarget && (
         <div className="card p-6 space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-700/70">
             Your target — {period}
           </h2>
-          <TargetCard
-            name={user.name}
-            target={myTarget}
-            actual={myProgress}
-          />
+          {myIsMkt && myMktProgress ? (
+            <MarketingTargetCard name={user.name} target={myTarget} actual={myMktProgress} />
+          ) : myProgress ? (
+            <TargetCard name={user.name} target={myTarget} actual={myProgress} />
+          ) : null}
         </div>
       )}
 
@@ -160,7 +173,9 @@ export default async function DashboardPage() {
                     {it.customer.name}
                   </Link>
                   <span className="block text-xs text-brand-700/50">
-                    {new Date(it.createdAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    {new Date(it.createdAt).toLocaleString("en-GB", {
+                      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                    })}
                   </span>
                 </li>
               ))}
@@ -194,7 +209,9 @@ export default async function DashboardPage() {
                     <tr key={t.id}>
                       <td className="py-2">
                         {t.name}
-                        {t.role === "OWNER" && <span className="badge ml-2 bg-brand-100 text-brand-700">owner</span>}
+                        {t.role === "OWNER" && (
+                          <span className="badge ml-2 bg-brand-100 text-brand-700">owner</span>
+                        )}
                       </td>
                       <td className="py-2 text-center text-brand-700/70">{t._count.customers}</td>
                       <td className="py-2 text-center text-base font-bold text-brand-700">{c.whatsapp}</td>
@@ -224,22 +241,30 @@ export default async function DashboardPage() {
       {isOwner && employees.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-brand-900">
-              Team targets — {period}
-            </h2>
-            <Link href="/team" className="text-sm text-brand-600 hover:underline">
-              Edit targets →
-            </Link>
+            <h2 className="text-lg font-semibold text-brand-900">Team targets — {period}</h2>
+            <Link href="/team" className="text-sm text-brand-600 hover:underline">Edit targets →</Link>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            {employees.map((e) => (
-              <TargetCard
-                key={e.id}
-                name={e.name}
-                target={targetMap[e.id] ?? { revenueTarget: null, contactTarget: null, followup7dTarget: null, followup30dTarget: null, convertedSaleTarget: null, repeatSaleTarget: null, newCustomerTarget: null }}
-                actual={progressMap[e.id] ?? { revenue: 0, contacts: 0, followup7d: 0, followup30d: 0, convertedSales: 0, repeatSales: 0, newCustomers: 0 }}
-              />
-            ))}
+            {employees.map((e) => {
+              const role  = normaliseRole(e.role);
+              const isMkt = isMarketingRole(role);
+              const tgt   = targetMap[e.id] ?? null;
+              return isMkt ? (
+                <MarketingTargetCard
+                  key={e.id}
+                  name={e.name}
+                  target={tgt ?? { postsTarget: null, viewsTarget: null, reactsTarget: null, commentsTarget: null, sharesTarget: null }}
+                  actual={mktProgressMap[e.id] ?? { posts: 0, views: 0, reacts: 0, comments: 0, shares: 0 }}
+                />
+              ) : (
+                <TargetCard
+                  key={e.id}
+                  name={e.name}
+                  target={tgt ?? { revenueTarget: null, contactTarget: null, followup7dTarget: null, followup30dTarget: null, convertedSaleTarget: null, repeatSaleTarget: null, newCustomerTarget: null }}
+                  actual={salesProgressMap[e.id] ?? { revenue: 0, contacts: 0, followup7d: 0, followup30d: 0, convertedSales: 0, repeatSales: 0, newCustomers: 0 }}
+                />
+              );
+            })}
           </div>
         </div>
       )}

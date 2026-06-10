@@ -27,7 +27,9 @@ export default async function SocialPlannerPage({
   const prev   = prevPeriod(period);
   const next   = nextPeriod(period);
 
-  const isManagerView = isOwnerRole(user.role) || isMarketingRole(user.role);
+  // Marketing employees can VIEW and log posts — only owner can create/delete/generate
+  const isManagerView = isOwnerRole(user.role); // kept for template/generate controls
+  const canView = isOwnerRole(user.role) || isMarketingRole(user.role);
 
   // Fetch posts for this period
   const postsRaw = await prisma.socialPost.findMany({

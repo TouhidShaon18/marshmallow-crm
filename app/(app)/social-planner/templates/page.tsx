@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, isOwnerRole, isMarketingRole } from "@/lib/auth";
+import { getCurrentUser, isOwnerRole } from "@/lib/auth";
 import { deleteTemplate, toggleTemplate } from "@/app/social-actions";
 import { CHANNEL_CONFIG } from "@/lib/social";
 import type { SocialChannelKey } from "@/lib/social";
@@ -11,7 +11,7 @@ import Link from "next/link";
 export default async function TemplatesPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (!isOwnerRole(user.role) && !isMarketingRole(user.role)) redirect("/social-planner");
+  if (!isOwnerRole(user.role)) redirect("/social-planner");
 
   const [templates, employees] = await Promise.all([
     prisma.socialTemplate.findMany({

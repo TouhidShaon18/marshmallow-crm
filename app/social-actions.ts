@@ -3,13 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, isOwnerRole, isMarketingRole } from "@/lib/auth";
+import { getCurrentUser, isOwnerRole } from "@/lib/auth";
 import { scheduledDateFor } from "@/lib/social";
 
-async function requireMarketing() {
+/** Only the owner can manage the planner (create/delete templates, generate months, etc.) */
+async function requireOwner() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (!isOwnerRole(user.role) && !isMarketingRole(user.role)) redirect("/marketing");
+  if (!isOwnerRole(user.role)) redirect("/marketing");
+  return user;
+}
+
+/** Any logged-in user can log their own posts / metrics. */
+async function requireAuth() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   return user;
 }
 
@@ -19,7 +27,7 @@ export async function createTemplate(
   _prev: { error?: string; ok?: boolean } | undefined,
   formData: FormData,
 ): Promise<{ error?: string; ok?: boolean }> {
-  await requireMarketing();
+  await requireOwner();
 
   const channel = formData.get("channel")?.toString();
   const topic   = formData.get("topic")?.toString().trim();
@@ -45,13 +53,13 @@ export async function createTemplate(
 }
 
 export async function toggleTemplate(id: string, active: boolean): Promise<void> {
-  await requireMarketing();
+  await requireOwner();
   await prisma.socialTemplate.update({ where: { id }, data: { active } });
   revalidatePath("/social-planner/templates");
 }
 
 export async function deleteTemplate(id: string): Promise<void> {
-  await requireMarketing();
+  await requireOwner();
   await prisma.socialTemplate.delete({ where: { id } });
   revalidatePath("/social-planner/templates");
   revalidatePath("/social-planner");
@@ -61,7 +69,7 @@ export async function deleteTemplate(id: string): Promise<void> {
 
 /** Generate this month's posts from active templates. Skips templates already generated. */
 export async function generateMonth(period: string): Promise<{ created: number }> {
-  await requireMarketing();
+  await requireOwner();
 
   const templates = await prisma.socialTemplate.findMany({
     where: { active: true },
@@ -100,7 +108,7 @@ export async function createOneOffPost(
   _prev: { error?: string; ok?: boolean } | undefined,
   formData: FormData,
 ): Promise<{ error?: string; ok?: boolean }> {
-  await requireMarketing();
+  await requireOwner();
 
   const channel = formData.get("channel")?.toString();
   const topic   = formData.get("topic")?.toString().trim();
@@ -127,7 +135,7 @@ export async function createOneOffPost(
 }
 
 export async function deletePost(id: string): Promise<void> {
-  await requireMarketing();
+  await requireOwner();
   await prisma.socialPost.delete({ where: { id } });
   revalidatePath("/social-planner");
 }
@@ -138,8 +146,7 @@ export async function markPosted(
   _prev: { error?: string } | undefined,
   formData: FormData,
 ): Promise<{ error?: string }> {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
   const id     = formData.get("postId")?.toString();
   const url    = formData.get("postUrl")?.toString().trim();
@@ -163,8 +170,7 @@ export async function logMetrics(
   _prev: { error?: string } | undefined,
   formData: FormData,
 ): Promise<{ error?: string }> {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
   const id = formData.get("postId")?.toString();
   if (!id) return { error: "Missing post ID." };

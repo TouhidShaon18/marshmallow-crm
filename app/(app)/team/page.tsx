@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, roleLabel, normaliseRole } from "@/lib/auth";
+import { getCurrentUser, roleLabel, normaliseRole, isMarketingRole } from "@/lib/auth";
 import { deleteEmployee } from "@/app/actions";
-import { getTargetProgress } from "@/app/target-actions";
+import { getTargetProgress, getMarketingProgress } from "@/app/target-actions";
 import EmployeeForm from "@/components/employee-form";
 import SetTargetForm from "@/components/set-target-form";
-import { TargetCard } from "@/components/target-progress";
+import { TargetCard, MarketingTargetCard } from "@/components/target-progress";
 import DeleteButton from "@/components/delete-button";
 
 function currentPeriod() {
@@ -33,11 +33,23 @@ export default async function TeamPage() {
   });
 
   // Fetch actual progress for employees only
-  const employees = members.filter((m) => m.role === "EMPLOYEE" || m.role === "SALES" || m.role === "MARKETING");
-  const progressMap = Object.fromEntries(
-    await Promise.all(
-      employees.map(async (m) => [m.id, await getTargetProgress(m.id, period)])
-    )
+  const employees = members.filter(
+    (m) => m.role === "EMPLOYEE" || m.role === "SALES" || m.role === "MARKETING",
+  );
+
+  // Fetch sales progress for sales/legacy employees, marketing progress for marketing employees
+  const progressMap: Record<string, Awaited<ReturnType<typeof getTargetProgress>>> = {};
+  const marketingProgressMap: Record<string, Awaited<ReturnType<typeof getMarketingProgress>>> = {};
+
+  await Promise.all(
+    employees.map(async (m) => {
+      const role = normaliseRole(m.role);
+      if (isMarketingRole(role)) {
+        marketingProgressMap[m.id] = await getMarketingProgress(m.id, period);
+      } else {
+        progressMap[m.id] = await getTargetProgress(m.id, period);
+      }
+    }),
   );
 
   return (
@@ -75,11 +87,15 @@ export default async function TeamPage() {
                   <td className="px-4 py-3 font-medium text-brand-900">{m.name}</td>
                   <td className="px-4 py-3 text-brand-700/80">{m.email}</td>
                   <td className="px-4 py-3">
-                    <span className={`badge ${
-                      m.role === "OWNER"     ? "bg-brand-100 text-brand-700"
-                      : m.role === "MARKETING" ? "bg-pink-100 text-pink-700"
-                      : "bg-sky-100 text-sky-700"
-                    }`}>
+                    <span
+                      className={`badge ${
+                        m.role === "OWNER"
+                          ? "bg-brand-100 text-brand-700"
+                          : m.role === "MARKETING"
+                          ? "bg-pink-100 text-pink-700"
+                          : "bg-sky-100 text-sky-700"
+                      }`}
+                    >
                       {roleLabel(normaliseRole(m.role))}
                     </span>
                   </td>
@@ -106,14 +122,16 @@ export default async function TeamPage() {
           <div>
             <h2 className="text-lg font-semibold text-brand-900">Monthly Targets</h2>
             <p className="text-sm text-brand-700/70">
-              Set targets for {period}. Progress updates in real time on the dashboard.
+              Set targets for {period}. Progress updates in real time.
             </p>
           </div>
 
           <div className="space-y-4">
             {employees.map((m) => {
-              const target = m.targets[0] ?? null;
-              const actual = progressMap[m.id] ?? { revenue: 0, contacts: 0, newCustomers: 0 };
+              const target  = m.targets[0] ?? null;
+              const role    = normaliseRole(m.role);
+              const isMkt   = isMarketingRole(role);
+
               return (
                 <div key={m.id} className="card p-5 space-y-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -125,14 +143,56 @@ export default async function TeamPage() {
                       userId={m.id}
                       name={m.name}
                       period={period}
+                      role={role}
                       current={target}
                     />
                   </div>
-                  <TargetCard
-                    name={m.name}
-                    target={target ?? { revenueTarget: null, contactTarget: null, followup7dTarget: null, followup30dTarget: null, convertedSaleTarget: null, repeatSaleTarget: null, newCustomerTarget: null }}
-                    actual={actual}
-                  />
+
+                  {isMkt ? (
+                    <MarketingTargetCard
+                      name={m.name}
+                      target={
+                        target ?? {
+                          postsTarget: null,
+                          viewsTarget: null,
+                          reactsTarget: null,
+                          commentsTarget: null,
+                          sharesTarget: null,
+                        }
+                      }
+                      actual={
+                        marketingProgressMap[m.id] ?? {
+                          posts: 0, views: 0, reacts: 0, comments: 0, shares: 0,
+                        }
+                      }
+                    />
+                  ) : (
+                    <TargetCard
+                      name={m.name}
+                      target={
+                        target ?? {
+                          revenueTarget: null,
+                          contactTarget: null,
+                          followup7dTarget: null,
+                          followup30dTarget: null,
+                          convertedSaleTarget: null,
+                          repeatSaleTarget: null,
+                          newCustomerTarget: null,
+                        }
+                      }
+                      actual={
+                        progressMap[m.id] ?? {
+                          revenue: 0,
+                          contacts: 0,
+                          followup7d: 0,
+                          followup30d: 0,
+                          convertedSales: 0,
+                          repeatSales: 0,
+                          newCustomers: 0,
+                        }
+                      }
+                    />
+                  )}
                 </div>
               );
             })}

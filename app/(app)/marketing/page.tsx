@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, isMarketingRole, isOwnerRole } from "@/lib/auth";
+import { getCurrentUser, isMarketingRole, isOwnerRole, normaliseRole } from "@/lib/auth";
+import { currentPeriod, periodToLabel, CHANNEL_CONFIG, ALL_CHANNELS } from "@/lib/social";
+import type { SocialChannelKey } from "@/lib/social";
+import { getMarketingProgress } from "@/app/target-actions";
+import { MarketingTargetCard } from "@/components/target-progress";
 
 const LEAD_SOURCE_EMOJI: Record<string, string> = {
   Instagram: "📸",
@@ -17,6 +21,162 @@ export default async function MarketingPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (!isMarketingRole(user.role) && !isOwnerRole(user.role)) redirect("/dashboard");
+
+  // ── Marketing employee: personal KPI dashboard ────────────────────────────
+  if (isMarketingRole(user.role) && !isOwnerRole(user.role)) {
+    const period = currentPeriod();
+    const label  = periodToLabel(period);
+    const [year, month] = period.split("-").map(Number);
+    const start = new Date(year, month - 1, 1);
+    const end   = new Date(year, month,     1);
+
+    const [posts, target] = await Promise.all([
+      prisma.socialPost.findMany({
+        where: { assignedToId: user.id, period },
+        orderBy: { scheduledDate: "asc" },
+        select: {
+          id: true, channel: true, topic: true, status: true,
+          viewCount: true, reactCount: true, commentCount: true, shareCount: true,
+          postedAt: true, postUrl: true, scheduledDate: true,
+        },
+      }),
+      prisma.employeeTarget.findFirst({
+        where: { userId: user.id, period },
+      }),
+    ]);
+
+    const actual = await getMarketingProgress(user.id, period);
+
+    // Posts needing metrics (status POSTED and 3+ days since postedAt)
+    const now = new Date();
+    const needsMetrics = posts.filter((p) => {
+      if (p.status !== "POSTED" || !p.postedAt) return false;
+      const days = (now.getTime() - new Date(p.postedAt).getTime()) / 86_400_000;
+      return days >= 3;
+    });
+
+    // Group by channel
+    const byChannel = new Map<SocialChannelKey, typeof posts>();
+    for (const p of posts) {
+      const ch = p.channel as SocialChannelKey;
+      if (!byChannel.has(ch)) byChannel.set(ch, []);
+      byChannel.get(ch)!.push(p);
+    }
+
+    const statusColor = (s: string) =>
+      s === "METRICS_LOGGED" ? "bg-green-100 text-green-700"
+      : s === "POSTED"       ? "bg-sky-100 text-sky-700"
+      : "bg-brand-100 text-brand-700";
+
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-brand-900">My Marketing Dashboard</h1>
+          <p className="text-sm text-brand-700/70">{label} · your content performance at a glance.</p>
+        </div>
+
+        {/* KPI cards */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          {[
+            { label: "Posts done",  value: actual.posts },
+            { label: "Total views",  value: actual.views.toLocaleString() },
+            { label: "Reactions",    value: actual.reacts.toLocaleString() },
+            { label: "Comments",     value: actual.comments.toLocaleString() },
+            { label: "Shares",       value: actual.shares.toLocaleString() },
+          ].map((k) => (
+            <div key={k.label} className="card p-4 text-center">
+              <p className="text-2xl font-bold text-brand-700">{k.value}</p>
+              <p className="text-xs text-brand-700/60">{k.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Target progress */}
+        {target && (
+          <MarketingTargetCard
+            name={`${user.name}'s targets`}
+            target={target}
+            actual={actual}
+          />
+        )}
+        {!target && (
+          <div className="rounded-lg border border-dashed border-pink-200 px-4 py-3 text-sm text-pink-700/50">
+            No targets set yet — ask your manager to assign monthly targets.
+          </div>
+        )}
+
+        {/* Needs metrics alert */}
+        {needsMetrics.length > 0 && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            ⚠️ <strong>{needsMetrics.length} post{needsMetrics.length > 1 ? "s" : ""}</strong> need metrics — they've been live 3+ days.{" "}
+            <Link href="/social-planner" className="underline">Log now →</Link>
+          </div>
+        )}
+
+        {/* Posts by channel */}
+        <div className="space-y-6">
+          <h2 className="text-base font-semibold text-brand-900">Posts this month</h2>
+          {posts.length === 0 ? (
+            <p className="text-sm text-brand-700/50">No posts assigned to you for {label}.</p>
+          ) : (
+            <div className="space-y-5">
+              {ALL_CHANNELS.filter((ch) => byChannel.has(ch)).map((ch) => {
+                const cfg = CHANNEL_CONFIG[ch];
+                const chPosts = byChannel.get(ch)!;
+                return (
+                  <div key={ch}>
+                    <h3 className={`mb-2 inline-flex items-center gap-1 rounded-full px-3 py-0.5 text-xs font-semibold ${cfg.color}`}>
+                      {cfg.icon} {cfg.label}
+                      <span className="ml-1 opacity-60">({chPosts.length})</span>
+                    </h3>
+                    <div className="space-y-2">
+                      {chPosts.map((p) => (
+                        <div key={p.id} className="card flex flex-wrap items-start gap-3 p-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-brand-900">{p.topic}</p>
+                            <p className="text-xs text-brand-700/50">
+                              Scheduled{" "}
+                              {new Date(p.scheduledDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                              {p.postUrl && (
+                                <>
+                                  {" · "}
+                                  <a href={p.postUrl} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
+                                    View post ↗
+                                  </a>
+                                </>
+                              )}
+                            </p>
+                            {p.status === "METRICS_LOGGED" && (
+                              <p className="text-xs text-brand-700/40">
+                                👁️ {p.viewCount ?? 0}  ❤️ {p.reactCount ?? 0}  💬 {p.commentCount ?? 0}  🔁 {p.shareCount ?? 0}
+                              </p>
+                            )}
+                          </div>
+                          <span className={`badge text-xs ${statusColor(p.status)}`}>
+                            {p.status.replace("_", " ").toLowerCase()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Link to social planner for actions */}
+        <div className="pt-2 border-t border-brand-100">
+          <Link href="/social-planner" className="btn-secondary text-sm">
+            📅 Open full social planner
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Owner: Marketing Hub ───────────────────────────────────────────────────
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -44,10 +204,7 @@ export default async function MarketingPage() {
     prisma.campaign.count(),
     prisma.campaign.count({
       where: {
-        OR: [
-          { endDate: null },
-          { endDate: { gte: now } },
-        ],
+        OR: [{ endDate: null }, { endDate: { gte: now } }],
         startDate: { lte: now },
       },
     }),
@@ -119,18 +276,13 @@ export default async function MarketingPage() {
                       </span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-brand-100">
-                      <div
-                        className="h-full rounded-full bg-brand-500"
-                        style={{ width: `${pct}%` }}
-                      />
+                      <div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
                 );
               })}
               {unknownCount > 0 && (
-                <p className="text-xs text-brand-700/40">
-                  + {unknownCount} without a source tracked
-                </p>
+                <p className="text-xs text-brand-700/40">+ {unknownCount} without a source tracked</p>
               )}
             </div>
           )}
@@ -149,9 +301,7 @@ export default async function MarketingPage() {
           {recentBroadcasts.length === 0 ? (
             <p className="text-sm text-brand-700/50">
               No broadcasts yet.{" "}
-              <Link href="/broadcasts" className="text-brand-600 hover:underline">
-                Create one
-              </Link>
+              <Link href="/broadcasts" className="text-brand-600 hover:underline">Create one</Link>
             </p>
           ) : (
             <ul className="divide-y divide-brand-50">
@@ -159,10 +309,7 @@ export default async function MarketingPage() {
                 <li key={b.id} className="py-2.5">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <Link
-                        href={`/broadcasts/${b.id}`}
-                        className="text-sm font-medium text-brand-900 hover:underline"
-                      >
+                      <Link href={`/broadcasts/${b.id}`} className="text-sm font-medium text-brand-900 hover:underline">
                         {b.name}
                       </Link>
                       <p className="text-xs text-brand-700/50">
@@ -173,15 +320,11 @@ export default async function MarketingPage() {
                         {b.recipientCount > 0 && ` · ${b.recipientCount} recipients`}
                       </p>
                     </div>
-                    <span
-                      className={`badge text-xs ${
-                        b.status === "SENT"
-                          ? "bg-green-100 text-green-700"
-                          : b.status === "SCHEDULED"
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-brand-100 text-brand-700"
-                      }`}
-                    >
+                    <span className={`badge text-xs ${
+                      b.status === "SENT" ? "bg-green-100 text-green-700"
+                      : b.status === "SCHEDULED" ? "bg-amber-100 text-amber-700"
+                      : "bg-brand-100 text-brand-700"
+                    }`}>
                       {b.status.toLowerCase()}
                     </span>
                   </div>
