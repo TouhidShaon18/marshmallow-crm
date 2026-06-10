@@ -25,7 +25,8 @@ const MARKETING_LINKS: NavItem[] = [
 ];
 
 const MGMT_LINKS: NavItem[] = [
-  { href: "/team", label: "Team", icon: "🛠️" },
+  { href: "/team",     label: "Team",     icon: "🛠️" },
+  { href: "/settings", label: "Settings", icon: "⚙️" },
 ];
 
 function NavGroup({ title, items }: { title: string; items: NavItem[] }) {

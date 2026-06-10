@@ -168,7 +168,8 @@ model Customer {
   assignedTo      User?         @relation("AssignedCustomers", fields: [assignedToId], references: [id])
   assignedToId    String?
 
-  leadSource      String?       // Instagram, TikTok, Facebook, Referral, Walk-in, Online, Other
+  leadSource      String?       // Instagram, TikTok, Facebook, Referral, Walk-in, Online, Other, Nuport
+  nuportId        String?       @unique  // Nuport customer ID — set on auto-synced records
 
   stage           Stage         @default(NEW_LEAD)
   lastContactedAt DateTime?
@@ -178,6 +179,13 @@ model Customer {
   enrollments     Enrollment[]
   tasks           Task[]
   tags            Tag[]
+}
+
+// Key-value store for app-level settings (Nuport API key, last sync time, etc.)
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 // GHL-style customer tags (many-to-many).
