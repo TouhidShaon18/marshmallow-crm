@@ -32,12 +32,12 @@ export default function CreateTemplateForm({ employees }: { employees: Employee[
           </select>
         </div>
         <div>
-          <label className="label">Day of month (1–28) *</label>
+          <label className="label">Day of month (1–31) *</label>
           <input
             name="dayOfMonth"
             type="number"
             min="1"
-            max="28"
+            max="31"
             required
             className="input"
             placeholder="e.g. 5"

@@ -25,8 +25,8 @@ export async function createTemplate(
   const topic   = formData.get("topic")?.toString().trim();
   const day     = parseInt(formData.get("dayOfMonth")?.toString() ?? "");
 
-  if (!channel || !topic || !day || day < 1 || day > 28) {
-    return { error: "Channel, topic, and a valid day (1–28) are required." };
+  if (!channel || !topic || !day || day < 1 || day > 31) {
+    return { error: "Channel, topic, and a valid day (1–31) are required." };
   }
 
   await prisma.socialTemplate.create({

@@ -305,7 +305,7 @@ model SocialTemplate {
   channel      SocialChannel
   topic        String        // post idea / content theme
   notes        String?       // caption hints, hashtags, etc.
-  dayOfMonth   Int           // 1–28 (safe for all months)
+  dayOfMonth   Int           // 1–31 (clamped to last day of month when generating)
   assignedTo   User?         @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
   assignedToId String?
   active       Boolean       @default(true)
