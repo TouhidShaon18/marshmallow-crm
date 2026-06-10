@@ -84,7 +84,7 @@ export default async function DashboardPage() {
 
   // Team targets (owner sees all employees; employee sees only self)
   const employees = isOwner
-    ? team.filter((t) => t.role === "EMPLOYEE")
+    ? team.filter((t) => t.role === "EMPLOYEE" || t.role === "SALES" || t.role === "MARKETING")
     : [];
 
   const employeeTargets = isOwner

@@ -10,7 +10,9 @@ datasource db {
 
 enum Role {
   OWNER
-  EMPLOYEE
+  EMPLOYEE   // legacy — treated as SALES
+  SALES
+  MARKETING
 }
 
 enum Channel {
@@ -133,6 +135,8 @@ model Customer {
 
   assignedTo      User?         @relation("AssignedCustomers", fields: [assignedToId], references: [id])
   assignedToId    String?
+
+  leadSource      String?       // Instagram, TikTok, Facebook, Referral, Walk-in, Online, Other
 
   stage           Stage         @default(NEW_LEAD)
   lastContactedAt DateTime?
@@ -269,4 +273,17 @@ model Interaction {
   type       InteractionType @default(NOTE)
   summary    String
   createdAt  DateTime        @default(now())
+}
+
+// Marketing campaign tracker.
+model Campaign {
+  id        String    @id @default(cuid())
+  name      String
+  channel   String    // Instagram, TikTok, Facebook, SMS, Email, Flyer, etc.
+  budget    Float?
+  startDate DateTime?
+  endDate   DateTime?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }

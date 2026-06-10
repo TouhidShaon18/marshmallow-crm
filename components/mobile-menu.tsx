@@ -3,42 +3,53 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { AppRole } from "@/lib/auth";
 
-const links = [
-  { href: "/dashboard", label: "Dashboard", icon: "📊" },
-  { href: "/tasks", label: "Today", icon: "✅" },
-  { href: "/pipeline", label: "Pipeline", icon: "📋" },
-  { href: "/customers", label: "Customers", icon: "👥" },
-  { href: "/sequences", label: "Sequences", icon: "📨" },
-  { href: "/automations", label: "Automations", icon: "⚡" },
-  { href: "/broadcasts", label: "Promotions", icon: "📣" },
-  { href: "/followups", label: "Follow-ups", icon: "⏰" },
-  { href: "/tags", label: "Tags", icon: "🏷️" },
+type NavItem = { href: string; label: string; icon: string };
+
+const SALES_LINKS: NavItem[] = [
+  { href: "/dashboard",  label: "Dashboard",   icon: "📊" },
+  { href: "/customers",  label: "Customers",   icon: "👥" },
+  { href: "/followups",  label: "Follow-ups",  icon: "⏰" },
+  { href: "/tasks",      label: "Today",       icon: "✅" },
+  { href: "/pipeline",   label: "Pipeline",    icon: "📋" },
+  { href: "/sequences",  label: "Sequences",   icon: "📨" },
+  { href: "/tags",       label: "Tags",        icon: "🏷️" },
 ];
 
-export default function MobileMenu({ role }: { role: "OWNER" | "EMPLOYEE" }) {
+const MARKETING_LINKS: NavItem[] = [
+  { href: "/marketing",   label: "Marketing Hub", icon: "🎯" },
+  { href: "/broadcasts",  label: "Broadcasts",    icon: "📣" },
+  { href: "/campaigns",   label: "Campaigns",     icon: "🚀" },
+  { href: "/automations", label: "Automations",   icon: "⚡" },
+];
+
+const MGMT_LINKS: NavItem[] = [
+  { href: "/team", label: "Team", icon: "🛠️" },
+];
+
+type Section = { title: string; items: NavItem[] };
+
+export default function MobileMenu({ role }: { role: AppRole }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Close drawer when navigating to a new page
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
-  // Prevent body scroll when drawer is open
+  useEffect(() => { setOpen(false); }, [pathname]);
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
-  const items =
-    role === "OWNER"
-      ? [...links, { href: "/team", label: "Team", icon: "🛠️" }]
-      : links;
+  const sections: Section[] = [];
+  if (role === "OWNER" || role === "SALES" || role === "EMPLOYEE")
+    sections.push({ title: "Sales", items: SALES_LINKS });
+  if (role === "OWNER" || role === "MARKETING")
+    sections.push({ title: "Marketing", items: MARKETING_LINKS });
+  if (role === "OWNER")
+    sections.push({ title: "Management", items: MGMT_LINKS });
 
   return (
     <>
-      {/* Hamburger button — mobile only */}
       <button
         onClick={() => setOpen(true)}
         className="flex h-9 w-9 items-center justify-center rounded-lg text-brand-700 hover:bg-brand-100 md:hidden"
@@ -49,7 +60,6 @@ export default function MobileMenu({ role }: { role: "OWNER" | "EMPLOYEE" }) {
         </svg>
       </button>
 
-      {/* Backdrop */}
       {open && (
         <div
           className="fixed inset-0 z-40 bg-black/40 md:hidden"
@@ -57,18 +67,14 @@ export default function MobileMenu({ role }: { role: "OWNER" | "EMPLOYEE" }) {
         />
       )}
 
-      {/* Slide-in drawer */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-2xl transition-transform duration-200 md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 overflow-y-auto bg-white shadow-2xl transition-transform duration-200 md:hidden ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Drawer header */}
         <div className="flex items-center justify-between border-b border-brand-100 px-5 py-4">
           <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-lg">
-              🍡
-            </span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-lg">🍡</span>
             <span className="font-bold text-brand-900">Marshmallow</span>
           </div>
           <button
@@ -80,26 +86,31 @@ export default function MobileMenu({ role }: { role: "OWNER" | "EMPLOYEE" }) {
           </button>
         </div>
 
-        {/* Nav links */}
-        <nav className="flex flex-col gap-1 px-3 py-3">
-          {items.map((item) => {
-            const active =
-              pathname === item.href || pathname.startsWith(item.href + "/");
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  active
-                    ? "bg-brand-600 text-white"
-                    : "text-brand-800 hover:bg-brand-100"
-                }`}
-              >
-                <span className="text-base">{item.icon}</span>
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="px-3 py-3">
+          {sections.map((section) => (
+            <div key={section.title} className="mt-3">
+              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-brand-400">
+                {section.title}
+              </p>
+              {section.items.map((item) => {
+                const active = pathname === item.href || pathname.startsWith(item.href + "/");
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                      active
+                        ? "bg-brand-600 text-white"
+                        : "text-brand-800 hover:bg-brand-100"
+                    }`}
+                  >
+                    <span className="text-base">{item.icon}</span>
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
       </div>
     </>

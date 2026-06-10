@@ -17,6 +17,7 @@ type CustomerValues = {
   birthday?: Date | null;
   orderAmount?: number | null;
   repeatCustomer?: boolean;
+  leadSource?: string | null;
   assignedToId?: string | null;
 };
 
@@ -89,6 +90,19 @@ export default function CustomerForm({
             <select id="channel" name="channel" className="input" defaultValue={c.channel ?? "OFFLINE"}>
               <option value="OFFLINE">Offline (in store)</option>
               <option value="ONLINE">Online</option>
+            </select>
+          </div>
+          <div>
+            <label className="label" htmlFor="leadSource">Lead source</label>
+            <select id="leadSource" name="leadSource" className="input" defaultValue={c.leadSource ?? ""}>
+              <option value="">— Unknown —</option>
+              <option value="Instagram">Instagram</option>
+              <option value="TikTok">TikTok</option>
+              <option value="Facebook">Facebook</option>
+              <option value="Referral">Referral</option>
+              <option value="Walk-in">Walk-in</option>
+              <option value="Online">Online (other)</option>
+              <option value="Other">Other</option>
             </select>
           </div>
           <div>

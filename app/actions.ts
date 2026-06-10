@@ -42,7 +42,7 @@ export async function login(
     return { error: "Wrong email or password." };
   }
   const rememberMe = formData.get("rememberMe") != null;
-  await createSession(user.id, rememberMe);
+  await createSession(user.id, user.role, rememberMe);
   redirect("/dashboard");
 }
 
@@ -69,6 +69,7 @@ function customerDataFromForm(fd: FormData) {
     birthday: birthdayRaw ? new Date(birthdayRaw) : null,
     orderAmount: orderRaw ? Number(orderRaw) : null,
     repeatCustomer: fd.get("repeatCustomer") != null,
+    leadSource: str(fd, "leadSource") || null,
     assignedToId: str(fd, "assignedToId"),
   };
 }
@@ -232,7 +233,8 @@ export async function createEmployee(
   const name = str(formData, "name");
   const email = str(formData, "email")?.toLowerCase();
   const password = str(formData, "password");
-  const role = str(formData, "role") === "OWNER" ? "OWNER" : "EMPLOYEE";
+  const rawRole = str(formData, "role") ?? "SALES";
+  const role = (["SALES", "MARKETING"].includes(rawRole) ? rawRole : "SALES") as "SALES" | "MARKETING";
 
   if (!name || !email || !password) {
     return { error: "Name, email and password are required." };

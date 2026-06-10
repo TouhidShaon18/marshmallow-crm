@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, roleLabel } from "@/lib/auth";
 import { logout } from "@/app/actions";
 import Sidebar from "@/components/sidebar";
 import MobileMenu from "@/components/mobile-menu";
@@ -25,7 +25,7 @@ export default async function AppLayout({
             <div className="text-right">
               <p className="text-sm font-semibold text-brand-900">{user.name}</p>
               <p className="text-xs text-brand-700/60">
-                {user.role === "OWNER" ? "Owner" : "Employee"} · {user.email}
+                {roleLabel(user.role)} · {user.email}
               </p>
             </div>
             <form action={logout}>

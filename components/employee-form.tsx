@@ -27,10 +27,10 @@ export default function EmployeeForm() {
           <input name="password" required minLength={6} className="input" />
         </div>
         <div>
-          <label className="label">Role</label>
-          <select name="role" className="input" defaultValue="EMPLOYEE">
-            <option value="EMPLOYEE">Employee</option>
-            <option value="OWNER">Owner</option>
+          <label className="label">Department</label>
+          <select name="role" className="input" defaultValue="SALES">
+            <option value="SALES">🛍️ Sales — customers, follow-ups, pipeline</option>
+            <option value="MARKETING">📣 Marketing — broadcasts, campaigns, automations</option>
           </select>
         </div>
       </div>

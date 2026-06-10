@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, roleLabel, normaliseRole } from "@/lib/auth";
 import { deleteEmployee } from "@/app/actions";
 import { getTargetProgress } from "@/app/target-actions";
 import EmployeeForm from "@/components/employee-form";
@@ -32,7 +32,7 @@ export default async function TeamPage() {
   });
 
   // Fetch actual progress for employees only
-  const employees = members.filter((m) => m.role === "EMPLOYEE");
+  const employees = members.filter((m) => m.role === "EMPLOYEE" || m.role === "SALES" || m.role === "MARKETING");
   const progressMap = Object.fromEntries(
     await Promise.all(
       employees.map(async (m) => [m.id, await getTargetProgress(m.id, period)])
@@ -74,8 +74,12 @@ export default async function TeamPage() {
                   <td className="px-4 py-3 font-medium text-brand-900">{m.name}</td>
                   <td className="px-4 py-3 text-brand-700/80">{m.email}</td>
                   <td className="px-4 py-3">
-                    <span className={`badge ${m.role === "OWNER" ? "bg-brand-100 text-brand-700" : "bg-gray-100 text-gray-600"}`}>
-                      {m.role === "OWNER" ? "Owner" : "Employee"}
+                    <span className={`badge ${
+                      m.role === "OWNER"     ? "bg-brand-100 text-brand-700"
+                      : m.role === "MARKETING" ? "bg-pink-100 text-pink-700"
+                      : "bg-sky-100 text-sky-700"
+                    }`}>
+                      {roleLabel(normaliseRole(m.role))}
                     </span>
                   </td>
                   <td className="px-4 py-3">{m._count.customers}</td>
