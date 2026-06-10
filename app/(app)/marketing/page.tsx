@@ -180,6 +180,8 @@ export default async function MarketingPage() {
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const ownerPeriod = currentPeriod();
+  const ownerPeriodLabel = periodToLabel(ownerPeriod);
 
   const [
     totalCustomers,
@@ -188,6 +190,7 @@ export default async function MarketingPage() {
     recentBroadcasts,
     campaigns,
     activeCampaigns,
+    marketingEmployees,
   ] = await Promise.all([
     prisma.customer.count(),
     prisma.customer.count({ where: { createdAt: { gte: startOfMonth } } }),
@@ -208,7 +211,53 @@ export default async function MarketingPage() {
         startDate: { lte: now },
       },
     }),
+    prisma.user.findMany({
+      where: { role: "MARKETING" },
+      orderBy: { name: "asc" },
+      select: {
+        id: true, name: true,
+        targets: { where: { period: ownerPeriod }, take: 1 },
+      },
+    }),
   ]);
+
+  // Fetch social posts for all marketing employees this month (one query)
+  const allMktPosts = await prisma.socialPost.findMany({
+    where: {
+      period: ownerPeriod,
+      assignedToId: { in: marketingEmployees.map((e) => e.id) },
+    },
+    select: {
+      assignedToId: true, channel: true, status: true,
+      viewCount: true, reactCount: true, commentCount: true, shareCount: true,
+    },
+  });
+
+  // Build per-employee stats
+  type MktStats = { posts: number; views: number; reacts: number; comments: number; shares: number; byChannel: Record<string, number> };
+  const mktStats: Record<string, MktStats> = {};
+  for (const e of marketingEmployees) {
+    mktStats[e.id] = { posts: 0, views: 0, reacts: 0, comments: 0, shares: 0, byChannel: {} };
+  }
+  for (const p of allMktPosts) {
+    if (!p.assignedToId) continue;
+    const s = mktStats[p.assignedToId];
+    if (!s) continue;
+    if (p.status === "POSTED" || p.status === "METRICS_LOGGED") {
+      s.posts++;
+      s.views    += p.viewCount    ?? 0;
+      s.reacts   += p.reactCount   ?? 0;
+      s.comments += p.commentCount ?? 0;
+      s.shares   += p.shareCount   ?? 0;
+    }
+    s.byChannel[p.channel] = (s.byChannel[p.channel] ?? 0) + 1;
+  }
+
+  // Overall channel totals
+  const channelTotals: Record<string, number> = {};
+  for (const p of allMktPosts) {
+    channelTotals[p.channel] = (channelTotals[p.channel] ?? 0) + 1;
+  }
 
   const knownLeadSources = leadSources.filter((r) => r.leadSource);
   const unknownCount = leadSources.find((r) => !r.leadSource)?._count._all ?? 0;
@@ -335,6 +384,78 @@ export default async function MarketingPage() {
         </div>
       </div>
 
+      {/* Marketing team performance */}
+      {marketingEmployees.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-brand-900">📣 Marketing Team — {ownerPeriodLabel}</h2>
+              <p className="text-sm text-brand-700/70">Content posted, metrics, and target progress.</p>
+            </div>
+            <Link href="/social-planner" className="text-sm text-brand-600 hover:underline">
+              Open planner →
+            </Link>
+          </div>
+
+          {/* Channel totals bar */}
+          {Object.keys(channelTotals).length > 0 && (
+            <div className="card p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-brand-700/60">Posts by channel this month</p>
+              <div className="flex flex-wrap gap-2">
+                {ALL_CHANNELS.filter((ch) => channelTotals[ch]).map((ch) => {
+                  const cfg = CHANNEL_CONFIG[ch];
+                  return (
+                    <span key={ch} className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${cfg.color}`}>
+                      {cfg.icon} {cfg.label}
+                      <span className="ml-1 rounded-full bg-white/60 px-1.5 py-0.5 font-bold">{channelTotals[ch]}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Per-employee KPI + target cards */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {marketingEmployees.map((e) => {
+              const s = mktStats[e.id] ?? { posts: 0, views: 0, reacts: 0, comments: 0, shares: 0 };
+              const tgt = e.targets[0] ?? null;
+              return (
+                <div key={e.id} className="card p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-brand-900">{e.name}</p>
+                    <Link href="/team" className="text-xs text-brand-500 hover:underline">Set target →</Link>
+                  </div>
+
+                  {/* Quick stats row */}
+                  <div className="grid grid-cols-5 gap-1 text-center">
+                    {[
+                      { icon: "📅", val: s.posts,    tip: "Posts" },
+                      { icon: "👁️", val: s.views,    tip: "Views" },
+                      { icon: "❤️",  val: s.reacts,   tip: "Reacts" },
+                      { icon: "💬", val: s.comments, tip: "Comments" },
+                      { icon: "🔁", val: s.shares,   tip: "Shares" },
+                    ].map((k) => (
+                      <div key={k.tip} className="rounded-lg bg-brand-50 px-1 py-2">
+                        <p className="text-sm">{k.icon}</p>
+                        <p className="text-sm font-bold text-brand-700">{k.val.toLocaleString()}</p>
+                        <p className="text-[10px] text-brand-700/50">{k.tip}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <MarketingTargetCard
+                    name={e.name}
+                    target={tgt ?? { postsTarget: null, viewsTarget: null, reactsTarget: null, commentsTarget: null, sharesTarget: null }}
+                    actual={s}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Quick links */}
       <div className="card p-6">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-700/70">
@@ -343,6 +464,7 @@ export default async function MarketingPage() {
         <div className="flex flex-wrap gap-3">
           <Link href="/broadcasts" className="btn-primary">📣 New broadcast</Link>
           <Link href="/campaigns" className="btn-secondary">🚀 View campaigns</Link>
+          <Link href="/social-planner" className="btn-secondary">📅 Social planner</Link>
           <Link href="/automations" className="btn-secondary">⚡ Automations</Link>
         </div>
       </div>
