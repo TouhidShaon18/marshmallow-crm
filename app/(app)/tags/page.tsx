@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { createTag, deleteTag } from "@/app/tag-actions";
 import TagBadge, { TAG_COLOR_KEYS } from "@/components/tag-badge";
 import CreateTagForm from "@/components/create-tag-form";
+import DeleteButton from "@/components/delete-button";
 
 export default async function TagsPage() {
   const tags = await prisma.tag.findMany({
@@ -41,14 +42,11 @@ export default async function TagsPage() {
                     {t._count.customers} customer{t._count.customers !== 1 ? "s" : ""}
                   </span>
                 </div>
-                <form action={del}>
-                  <button
-                    type="submit"
-                    className="btn-ghost text-xs text-red-600 hover:bg-red-50"
-                  >
-                    Delete
-                  </button>
-                </form>
+                <DeleteButton
+                  action={del}
+                  message={`Delete the tag "${t.name}"? It will be removed from all customers.`}
+                  className="btn-ghost text-xs text-red-600 hover:bg-red-50"
+                />
               </div>
             );
           })

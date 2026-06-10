@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { toggleWorkflow, deleteWorkflow, runAutomationsNow } from "@/app/followup-actions";
 import WorkflowForm from "@/components/workflow-form";
 import { STAGE_LABEL, type StageKey } from "@/lib/labels";
+import DeleteButton from "@/components/delete-button";
 
 function triggerText(w: { trigger: string; triggerStage: string | null; daysBefore: number | null; inactivityDays: number | null }): string {
   switch (w.trigger) {
@@ -75,9 +76,11 @@ export default async function AutomationsPage() {
                         {w.active ? "Pause" : "Activate"}
                       </button>
                     </form>
-                    <form action={del}>
-                      <button type="submit" className="text-sm text-red-600 hover:underline">Delete</button>
-                    </form>
+                    <DeleteButton
+                      action={del}
+                      label="Delete"
+                      message="Delete this automation workflow? It will stop running for all customers."
+                    />
                   </div>
                 </div>
               </div>

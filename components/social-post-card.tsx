@@ -4,6 +4,7 @@ import { useState, useActionState } from "react";
 import { markPosted, logMetrics, deletePost } from "@/app/social-actions";
 import { CHANNEL_CONFIG } from "@/lib/social";
 import type { SocialChannelKey } from "@/lib/social";
+import DeleteButton from "@/components/delete-button";
 
 type Post = {
   id: string;
@@ -107,7 +108,7 @@ export default function SocialPostCard({ post, canDelete }: { post: Post; canDel
     : null;
   const needsMetrics = post.status === "POSTED" && daysSincePost !== null && daysSincePost >= 3;
 
-  const del = deletePost.bind(null, post.id);
+  const del = deletePost.bind(null, post.id); // passed to DeleteButton
 
   return (
     <div className={`rounded-xl border bg-white p-4 shadow-sm transition-all ${
@@ -182,15 +183,14 @@ export default function SocialPostCard({ post, canDelete }: { post: Post; canDel
           <LogMetricsForm postId={post.id} />
         )}
         {canDelete && (
-          <form action={del} className="ml-auto">
-            <button
-              type="submit"
+          <span className="ml-auto">
+            <DeleteButton
+              action={del}
+              label="Delete"
+              message="Delete this post from the planner?"
               className="text-xs text-red-400 hover:text-red-600"
-              onClick={(e) => { if (!confirm("Delete this post?")) e.preventDefault(); }}
-            >
-              Delete
-            </button>
-          </form>
+            />
+          </span>
         )}
       </div>
     </div>

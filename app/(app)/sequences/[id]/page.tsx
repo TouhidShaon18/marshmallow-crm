@@ -8,6 +8,7 @@ import {
   toggleSequenceActive,
 } from "@/app/followup-actions";
 import { CHANNEL_ICON, CHANNEL_LABEL, type ChannelKey } from "@/lib/labels";
+import DeleteButton from "@/components/delete-button";
 
 export default async function SequenceEditorPage({
   params,
@@ -39,9 +40,12 @@ export default async function SequenceEditorPage({
           <form action={toggle}>
             <button type="submit" className="btn-secondary">{sequence.active ? "Pause" : "Activate"}</button>
           </form>
-          <form action={del}>
-            <button type="submit" className="btn-ghost text-red-600 hover:bg-red-50">Delete</button>
-          </form>
+          <DeleteButton
+            action={del}
+            label="Delete"
+            message="Delete this sequence and all its steps? This cannot be undone."
+            className="btn-ghost text-red-600 hover:bg-red-50"
+          />
         </div>
       </div>
 
@@ -69,9 +73,11 @@ export default async function SequenceEditorPage({
                       </p>
                     )}
                   </div>
-                  <form action={delStep}>
-                    <button type="submit" className="text-sm text-red-600 hover:underline">Remove</button>
-                  </form>
+                  <DeleteButton
+                    action={delStep}
+                    label="Remove"
+                    message="Remove this step from the sequence?"
+                  />
                 </div>
               </div>
             );

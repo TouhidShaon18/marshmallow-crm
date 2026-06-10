@@ -10,6 +10,7 @@ import EmailComposer from "@/components/email-composer";
 import CustomerInsight, { CustomerInsightSkeleton } from "@/components/customer-insight";
 import CustomerTags from "@/components/customer-tags";
 import { STAGE_LABEL, STAGE_COLOR, CHANNEL_ICON, type StageKey, type ChannelKey } from "@/lib/labels";
+import DeleteButton from "@/components/delete-button";
 
 const typeStyle: Record<string, string> = {
   WHATSAPP: "bg-green-100 text-green-700",
@@ -138,11 +139,12 @@ export default async function CustomerDetailPage({
             <EmailComposer customerId={id} to={customer.email} />
           </div>
 
-          <form action={delAction}>
-            <button type="submit" className="btn-ghost text-red-600 hover:bg-red-50">
-              Delete customer
-            </button>
-          </form>
+          <DeleteButton
+            action={delAction}
+            label="Delete customer"
+            message="Permanently delete this customer and all their history? This cannot be undone."
+            className="btn-ghost text-red-600 hover:bg-red-50"
+          />
         </div>
 
         {/* Right column: automation + log + timeline */}
@@ -181,9 +183,12 @@ export default async function CustomerDetailPage({
                     return (
                       <div key={e.id} className="flex items-center justify-between rounded-lg bg-brand-50 px-3 py-2 text-sm">
                         <span className="text-brand-900">📨 {e.sequence.name}</span>
-                        <form action={cancel}>
-                          <button type="submit" className="text-xs text-red-600 hover:underline">Cancel</button>
-                        </form>
+                        <DeleteButton
+                          action={cancel}
+                          label="Cancel"
+                          message="Cancel this enrollment? The customer will stop receiving follow-ups from this sequence."
+                          className="text-xs text-red-600 hover:underline"
+                        />
                       </div>
                     );
                   })}

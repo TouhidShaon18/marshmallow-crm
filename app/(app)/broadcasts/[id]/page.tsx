@@ -5,6 +5,7 @@ import { markBroadcastSent, deleteBroadcast } from "@/app/broadcast-actions";
 import { audienceWhere, mergeMessage, audienceSummary } from "@/lib/audience";
 import { STAGE_LABEL, type StageKey } from "@/lib/labels";
 import SendSmsForm from "@/components/send-sms-form";
+import DeleteButton from "@/components/delete-button";
 
 export default async function BroadcastDetailPage({
   params,
@@ -59,9 +60,12 @@ export default async function BroadcastDetailPage({
         </div>
         <div className="flex gap-2">
           <a href={`/broadcasts/${id}/export`} className="btn-secondary">⬇️ Export recipients (CSV)</a>
-          <form action={del}>
-            <button type="submit" className="btn-ghost text-red-600 hover:bg-red-50">Delete</button>
-          </form>
+          <DeleteButton
+            action={del}
+            label="Delete"
+            message="Delete this broadcast? This cannot be undone."
+            className="btn-ghost text-red-600 hover:bg-red-50"
+          />
         </div>
       </div>
 

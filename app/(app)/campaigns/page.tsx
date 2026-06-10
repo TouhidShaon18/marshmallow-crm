@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser, isMarketingRole, isOwnerRole } from "@/lib/auth";
 import { deleteCampaign } from "@/app/campaign-actions";
 import CreateCampaignForm from "@/components/create-campaign-form";
+import DeleteButton from "@/components/delete-button";
 
 const CHANNELS = [
   "Instagram", "TikTok", "Facebook", "SMS", "Email",
@@ -77,17 +78,12 @@ export default async function CampaignsPage() {
                     )}
                     {c.notes && <p className="mt-1 text-xs text-brand-700/60 italic">{c.notes}</p>}
                   </div>
-                  <form action={del}>
-                    <button
-                      type="submit"
-                      className="text-xs text-red-500 hover:underline"
-                      onClick={(e) => {
-                        if (!confirm("Delete this campaign?")) e.preventDefault();
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </form>
+                  <DeleteButton
+                    action={del}
+                    label="Delete"
+                    message={`Delete the campaign "${c.name}"? This cannot be undone.`}
+                    className="text-xs text-red-500 hover:underline"
+                  />
                 </div>
               </div>
             );

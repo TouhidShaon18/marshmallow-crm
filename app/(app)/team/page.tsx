@@ -6,6 +6,7 @@ import { getTargetProgress } from "@/app/target-actions";
 import EmployeeForm from "@/components/employee-form";
 import SetTargetForm from "@/components/set-target-form";
 import { TargetCard } from "@/components/target-progress";
+import DeleteButton from "@/components/delete-button";
 
 function currentPeriod() {
   const now = new Date();
@@ -85,11 +86,11 @@ export default async function TeamPage() {
                   <td className="px-4 py-3">{m._count.customers}</td>
                   <td className="px-4 py-3 text-right">
                     {m.id !== user.id && (
-                      <form action={del}>
-                        <button type="submit" className="text-sm text-red-600 hover:underline">
-                          Remove
-                        </button>
-                      </form>
+                      <DeleteButton
+                        action={del}
+                        label="Remove"
+                        message={`Remove ${m.name} from the team? Their customers will be unassigned.`}
+                      />
                     )}
                   </td>
                 </tr>

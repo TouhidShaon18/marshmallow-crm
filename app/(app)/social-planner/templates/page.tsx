@@ -5,6 +5,7 @@ import { deleteTemplate, toggleTemplate } from "@/app/social-actions";
 import { CHANNEL_CONFIG } from "@/lib/social";
 import type { SocialChannelKey } from "@/lib/social";
 import CreateTemplateForm from "@/components/create-template-form";
+import DeleteButton from "@/components/delete-button";
 import Link from "next/link";
 
 export default async function TemplatesPage() {
@@ -77,15 +78,12 @@ export default async function TemplatesPage() {
                   <form action={pause}>
                     <button type="submit" className="text-brand-500 hover:underline">Pause</button>
                   </form>
-                  <form action={del}>
-                    <button
-                      type="submit"
-                      className="text-red-400 hover:text-red-600"
-                      onClick={(e) => { if (!confirm("Delete this template?")) e.preventDefault(); }}
-                    >
-                      Delete
-                    </button>
-                  </form>
+                  <DeleteButton
+                    action={del}
+                    label="Delete"
+                    message={`Delete the "${t.topic}" template? Future months won't generate this post.`}
+                    className="text-red-400 hover:text-red-600 text-xs"
+                  />
                 </div>
               </div>
             );
@@ -116,12 +114,12 @@ export default async function TemplatesPage() {
                   <form action={resume}>
                     <button type="submit" className="text-green-600 hover:underline">Resume</button>
                   </form>
-                  <form action={del}>
-                    <button type="submit" className="text-red-400 hover:text-red-600"
-                      onClick={(e) => { if (!confirm("Delete?")) e.preventDefault(); }}>
-                      Delete
-                    </button>
-                  </form>
+                  <DeleteButton
+                    action={del}
+                    label="Delete"
+                    message={`Delete the "${t.topic}" template?`}
+                    className="text-red-400 hover:text-red-600 text-xs"
+                  />
                 </div>
               </div>
             );
