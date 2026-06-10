@@ -63,15 +63,15 @@ export default function Sidebar({ role }: { role: AppRole }) {
   const showMgmt       = role === "OWNER";
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-brand-100 bg-white md:flex">
-      <div className="flex items-center gap-2 px-5 py-4">
+    <aside className="hidden w-60 shrink-0 flex-col border-r border-brand-100 bg-white md:flex h-screen sticky top-0">
+      <div className="flex items-center gap-2 px-5 py-4 shrink-0">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-lg">
           🍡
         </span>
         <span className="font-bold text-brand-900">Marshmallow</span>
       </div>
 
-      <nav className="flex flex-col px-3 py-2 pb-6">
+      <nav className="flex flex-col overflow-y-auto px-3 py-2 pb-6">
         {showSales     && <NavGroup title="Sales"      items={SALES_LINKS} />}
         {showMarketing && <NavGroup title="Marketing"  items={MARKETING_LINKS} />}
         {showMgmt      && <NavGroup title="Management" items={MGMT_LINKS} />}

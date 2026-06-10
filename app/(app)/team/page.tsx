@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, roleLabel, normaliseRole, isMarketingRole } from "@/lib/auth";
@@ -54,9 +55,14 @@ export default async function TeamPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-brand-900">Team</h1>
-        <p className="text-sm text-brand-700/70">Manage employees and set monthly targets.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-brand-900">Team</h1>
+          <p className="text-sm text-brand-700/70">Manage employees and set monthly targets.</p>
+        </div>
+        <Link href="/settings" className="btn-secondary text-sm whitespace-nowrap">
+          ⚙️ Settings
+        </Link>
       </div>
 
       {/* Add employee */}
