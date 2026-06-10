@@ -1,89 +1,73 @@
 /**
- * Nuport API client
+ * Nuport API utilities
  *
  * Base URL:  https://api.nuport.io
  * Auth:      Authorization: <api_key>   (raw key, no "Bearer" prefix)
- * Customers: GET /integration/customers  (paginated)
+ *
+ * Note: Nuport's published API is write-only for customers
+ * (POST /integration/customers pushes TO Nuport). There is no GET customers
+ * endpoint. The integration uses an inbound webhook instead — Nuport calls
+ * our /api/webhooks/nuport endpoint when new orders/customers are added.
  */
 
 const BASE_URL = "https://api.nuport.io";
 
-/** Shape we expect from Nuport's customer list response. */
+/**
+ * Normalised customer data we extract from any Nuport webhook payload.
+ * Nuport may send an order object, a customer object, or a combined one.
+ */
 export type NuportCustomer = {
-  id:       string;
+  nuportId: string;        // whatever unique ID Nuport provides
   name:     string;
   mobile?:  string;
   phone?:   string;
   email?:   string;
   address?: string;
   area?:    string;
-  [key: string]: unknown; // allow extra fields we don't need
-};
-
-type PagedResponse = {
-  data?:    NuportCustomer[];
-  results?: NuportCustomer[];  // some Nuport endpoints use "results"
-  count?:   number;
-  next?:    string | null;
+  source?:  string;        // order source e.g. FACEBOOK, WHATSAPP
 };
 
 /**
- * Fetch one page of customers from Nuport.
- * Returns the raw response so the caller can decide whether to paginate.
+ * Parse a Nuport webhook payload (order or customer) into our normalised shape.
+ * Handles the various shapes Nuport may send.
  */
-async function fetchPage(
-  apiKey: string,
-  page: number,
-  perPage = 100,
-): Promise<{ customers: NuportCustomer[]; hasMore: boolean }> {
-  const url = `${BASE_URL}/integration/customers?page=${page}&per_page=${perPage}`;
-  const res = await fetch(url, {
-    headers: { Authorization: apiKey },
-    cache: "no-store",
-  });
+export function parseNuportPayload(body: unknown): NuportCustomer | null {
+  if (!body || typeof body !== "object") return null;
+  const d = body as Record<string, unknown>;
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Nuport API error ${res.status}: ${body}`);
-  }
+  // Try to extract customer/recipient block (order payloads often nest customer info)
+  const customer = (d.customer ?? d.recipient ?? d.consignee ?? d) as Record<string, unknown>;
 
-  const json = (await res.json()) as PagedResponse | NuportCustomer[];
+  const id    = String(customer.id ?? d.customerId ?? d.id ?? "");
+  const name  = String(customer.name ?? d.customerName ?? d.name ?? "").trim();
 
-  // Handle both array and paged-object responses
-  if (Array.isArray(json)) {
-    return { customers: json, hasMore: json.length === perPage };
-  }
+  if (!id || !name) return null;
 
-  const customers = json.data ?? json.results ?? [];
-  const hasMore = customers.length === perPage && (json.next ?? null) !== null;
-  return { customers, hasMore };
+  return {
+    nuportId: id,
+    name,
+    mobile:  toStr(customer.mobile  ?? d.mobile  ?? customer.phone ?? d.phone),
+    email:   toStr(customer.email   ?? d.email),
+    address: toStr(customer.address ?? d.address ?? customer.deliveryAddress ?? d.deliveryAddress),
+    area:    toStr(customer.area    ?? d.area    ?? customer.zone ?? d.zone),
+    source:  toStr(d.source ?? d.orderSource ?? d.channel),
+  };
 }
 
-/**
- * Fetch ALL customers from Nuport by walking every page.
- * Use sparingly (once/hour is fine for typical customer counts).
- */
-export async function fetchAllNuportCustomers(
-  apiKey: string,
-): Promise<NuportCustomer[]> {
-  const all: NuportCustomer[] = [];
-  let page = 1;
-
-  for (;;) {
-    const { customers, hasMore } = await fetchPage(apiKey, page);
-    all.push(...customers);
-    if (!hasMore || customers.length === 0) break;
-    page++;
-  }
-
-  return all;
+function toStr(v: unknown): string | undefined {
+  if (!v) return undefined;
+  const s = String(v).trim();
+  return s || undefined;
 }
 
-/** Validate the API key by doing a lightweight 1-item fetch. */
+/** Validate the API key by hitting a known lightweight endpoint. */
 export async function testNuportApiKey(apiKey: string): Promise<boolean> {
   try {
-    await fetchPage(apiKey, 1, 1);
-    return true;
+    const r = await fetch(`${BASE_URL}/integration/order-sources`, {
+      headers: { Authorization: apiKey },
+      cache: "no-store",
+    });
+    return r.ok;
   } catch {
     return false;
   }

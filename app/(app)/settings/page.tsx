@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth";
 import { getNuportSettings } from "@/app/nuport-actions";
-import NuportSettingsForm from "@/components/nuport-settings-form";
-import NuportSyncButton from "@/components/nuport-sync-button";
+import NuportApiKeyForm from "@/components/nuport-settings-form";
+import NuportWebhookSecretForm from "@/components/nuport-webhook-secret-form";
+import CopyButton from "@/components/copy-button";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
@@ -10,6 +12,11 @@ export default async function SettingsPage() {
   if (user.role !== "OWNER") redirect("/dashboard");
 
   const nuport = await getNuportSettings();
+
+  const headersList = await headers();
+  const host  = headersList.get("host") ?? "your-crm.vercel.app";
+  const proto = host.includes("localhost") ? "http" : "https";
+  const webhookUrl = `${proto}://${host}/api/webhooks/nuport`;
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
@@ -19,7 +26,8 @@ export default async function SettingsPage() {
       </div>
 
       {/* Nuport Integration */}
-      <div className="card p-6 space-y-5">
+      <div className="card p-6 space-y-6">
+        {/* Header */}
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-xl">
             📦
@@ -27,75 +35,105 @@ export default async function SettingsPage() {
           <div>
             <h2 className="font-semibold text-brand-900">Nuport Integration</h2>
             <p className="text-sm text-brand-700/70">
-              Auto-import customers from your Nuport order management account into the CRM.
-              Sync runs every hour — new Nuport customers appear here automatically.
+              Auto-import customers from Nuport into the CRM whenever a new order is placed.
             </p>
           </div>
         </div>
 
-        {/* Status badges */}
-        <div className="flex flex-wrap gap-3 text-xs">
+        {/* Status pills */}
+        <div className="flex flex-wrap gap-2 text-xs">
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium ${
             nuport.hasKey ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
           }`}>
             <span className={`h-1.5 w-1.5 rounded-full ${nuport.hasKey ? "bg-green-500" : "bg-amber-500"}`} />
-            {nuport.hasKey ? "Connected" : "Not configured"}
+            {nuport.hasKey ? "API key saved" : "API key not set"}
           </span>
 
-          {nuport.lastSyncAt && (
+          {nuport.webhookSecret && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 font-medium text-green-700">
+              🔒 Webhook secret active
+            </span>
+          )}
+
+          {nuport.lastWebhookAt && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 font-medium text-brand-700">
-              🕐 Last sync:{" "}
-              {new Date(nuport.lastSyncAt).toLocaleString("en-GB", {
+              🕐 Last received:{" "}
+              {new Date(nuport.lastWebhookAt).toLocaleString("en-GB", {
                 day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
               })}
             </span>
           )}
 
-          {nuport.lastSyncCount !== null && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 font-medium text-brand-700">
-              ✅ {nuport.lastSyncCount} customers added last sync
-            </span>
-          )}
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 font-medium text-brand-700">
+            ✅ {nuport.totalSynced} customers synced
+          </span>
         </div>
 
-        {/* Current masked key */}
-        {nuport.maskedKey && (
-          <div className="rounded-lg bg-brand-50 px-4 py-2.5 text-sm">
-            <span className="text-brand-700/60">Current API key: </span>
-            <code className="font-mono text-brand-900">{nuport.maskedKey}</code>
+        {/* STEP 1 — Webhook URL */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">1</span>
+            <h3 className="text-sm font-semibold text-brand-900">Add this URL in Nuport</h3>
           </div>
-        )}
-
-        {/* API key form */}
-        <div>
-          <h3 className="mb-3 text-sm font-semibold text-brand-900">
-            {nuport.hasKey ? "Update API key" : "Enter your Nuport API key"}
-          </h3>
-          <p className="mb-3 text-xs text-brand-700/60">
-            Find it in Nuport → <strong>Company Settings</strong> → <strong>API Key</strong>.
+          <p className="ml-7 text-xs text-brand-700/60">
+            In Nuport → <strong>Settings → Integrations</strong> (or Webhooks), paste this URL.
+            Nuport will POST here every time a new order or customer is added.
           </p>
-          <NuportSettingsForm />
+          <div className="ml-7 flex items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2.5">
+            <code className="flex-1 break-all font-mono text-xs text-brand-900">{webhookUrl}</code>
+            <CopyButton value={webhookUrl} />
+          </div>
         </div>
 
-        {/* Manual sync */}
-        {nuport.hasKey && (
-          <div className="border-t border-brand-100 pt-4">
-            <h3 className="mb-1 text-sm font-semibold text-brand-900">Manual sync</h3>
-            <p className="mb-3 text-xs text-brand-700/60">
-              Pull the latest customers from Nuport right now without waiting for the hourly job.
-            </p>
-            <NuportSyncButton />
+        {/* STEP 2 — Webhook secret */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">2</span>
+            <h3 className="text-sm font-semibold text-brand-900">
+              Webhook secret{" "}
+              <span className="font-normal text-brand-700/50">(optional)</span>
+            </h3>
           </div>
-        )}
+          <p className="ml-7 text-xs text-brand-700/60">
+            If Nuport asks for a secret token, set it here and paste the same value in Nuport.
+            Requests without the matching secret will be rejected.
+          </p>
+          <div className="ml-7">
+            <NuportWebhookSecretForm current={nuport.webhookSecret} />
+          </div>
+        </div>
+
+        {/* STEP 3 — API key */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-200 text-[10px] font-bold text-brand-700">3</span>
+            <h3 className="text-sm font-semibold text-brand-900">
+              Nuport API key{" "}
+              <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-normal text-brand-600">optional</span>
+            </h3>
+          </div>
+          <p className="ml-7 text-xs text-brand-700/60">
+            Found in Nuport → <strong>Company Settings → API Key</strong>.
+            Saves it for future two-way features.
+          </p>
+          {nuport.maskedKey && (
+            <p className="ml-7 text-xs text-brand-700/60">
+              Current: <code className="font-mono text-brand-900">{nuport.maskedKey}</code>
+            </p>
+          )}
+          <div className="ml-7">
+            <NuportApiKeyForm />
+          </div>
+        </div>
 
         {/* How it works */}
         <div className="rounded-xl border border-brand-100 bg-brand-50/50 px-4 py-4 text-xs text-brand-700/70 space-y-1.5">
-          <p className="font-semibold text-brand-900 text-sm">How the sync works</p>
-          <p>• Every hour the CRM fetches your full customer list from Nuport.</p>
-          <p>• Only <strong>new</strong> customers are added — existing CRM records are never overwritten.</p>
-          <p>• Synced customers are tagged with <strong>lead source: Nuport</strong> and channel: Online.</p>
-          <p>• They land with no sales rep — assign them from the Customers page.</p>
-          <p>• If a customer was already added manually with the same Nuport ID, it's skipped.</p>
+          <p className="font-semibold text-brand-900 text-sm">How it works</p>
+          <p>• You paste the webhook URL above into Nuport Settings.</p>
+          <p>• Whenever a new order is placed in Nuport, it instantly sends the customer data here.</p>
+          <p>• The CRM creates a new customer record with their name, phone, and address.</p>
+          <p>• Synced customers are tagged <strong>Lead Source: Nuport</strong> and Channel: Online.</p>
+          <p>• Duplicate customers (same Nuport ID) are automatically skipped.</p>
         </div>
       </div>
     </div>

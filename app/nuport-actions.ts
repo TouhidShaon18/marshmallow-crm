@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { getSetting, setSetting, runNuportSync } from "@/lib/nuport-sync";
+import { getSetting, setSetting } from "@/lib/nuport-sync";
 import { testNuportApiKey } from "@/lib/nuport";
 
 async function requireOwner() {
@@ -13,7 +13,7 @@ async function requireOwner() {
   return user;
 }
 
-/** Save (or update) the Nuport API key. Validates it live before saving. */
+/** Save (and live-validate) the Nuport API key. */
 export async function saveNuportApiKey(
   _prev: { error?: string; ok?: boolean } | undefined,
   formData: FormData,
@@ -24,37 +24,40 @@ export async function saveNuportApiKey(
   if (!key) return { error: "API key cannot be empty." };
 
   const valid = await testNuportApiKey(key);
-  if (!valid) return { error: "Could not connect to Nuport with that API key. Check the key and try again." };
+  if (!valid) return { error: "Could not connect to Nuport with that key. Double-check and try again." };
 
   await setSetting("nuport_api_key", key);
   revalidatePath("/settings");
   return { ok: true };
 }
 
-/** Manually trigger a Nuport sync and return the result. */
-export async function triggerNuportSync(
-  _prev: { error?: string; created?: number; total?: number } | undefined,
-): Promise<{ error?: string; created?: number; total?: number }> {
+/** Save a webhook secret the user wants to use for verification. */
+export async function saveWebhookSecret(
+  _prev: { error?: string; ok?: boolean } | undefined,
+  formData: FormData,
+): Promise<{ error?: string; ok?: boolean }> {
   await requireOwner();
 
-  const result = await runNuportSync();
-  revalidatePath("/customers");
+  const secret = formData.get("webhookSecret")?.toString().trim() ?? "";
+  await setSetting("nuport_webhook_secret", secret);
   revalidatePath("/settings");
-
-  if (result.error) return { error: result.error };
-  return { created: result.created, total: result.total };
+  return { ok: true };
 }
 
-/** Read current settings for the settings page (API key masked, last sync time). */
+/** Read current settings for the settings page. */
 export async function getNuportSettings() {
-  const rawKey     = await getSetting("nuport_api_key");
-  const lastSync   = await getSetting("nuport_last_sync_at");
-  const lastCount  = await getSetting("nuport_last_sync_count");
+  const rawKey        = await getSetting("nuport_api_key");
+  const webhookSecret = await getSetting("nuport_webhook_secret");
+  const lastWebhook   = await getSetting("nuport_last_webhook_at");
+  const totalSynced   = await getSetting("nuport_total_synced");
 
   return {
-    hasKey:      !!rawKey,
-    maskedKey:   rawKey ? `${rawKey.slice(0, 6)}${"•".repeat(Math.max(0, rawKey.length - 10))}${rawKey.slice(-4)}` : null,
-    lastSyncAt:  lastSync,
-    lastSyncCount: lastCount ? parseInt(lastCount) : null,
+    hasKey:       !!rawKey,
+    maskedKey:    rawKey
+      ? `${rawKey.slice(0, 6)}${"•".repeat(Math.max(0, rawKey.length - 10))}${rawKey.slice(-4)}`
+      : null,
+    webhookSecret: webhookSecret ?? "",
+    lastWebhookAt: lastWebhook,
+    totalSynced:   totalSynced ? parseInt(totalSynced) : 0,
   };
 }
