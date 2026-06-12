@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, isOwnerRole, isFinanceRole, normaliseRole } from "@/lib/auth";
-import { calcFinance } from "@/app/finance-actions";
+import { calcFinance } from "@/lib/finance";
 import { getFinanceInsight } from "@/lib/ai";
 
 function periodLabel(p: string) {
