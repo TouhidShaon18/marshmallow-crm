@@ -42,6 +42,12 @@ export default async function SettingsPage() {
 
         <div className="flex flex-wrap gap-2 text-xs">
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium ${
+            gmb.enabled ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+          }`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${gmb.enabled ? "bg-green-500" : "bg-gray-400"}`} />
+            {gmb.enabled ? "Active" : "Paused"}
+          </span>
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium ${
             gmb.reviewUrl ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
           }`}>
             <span className={`h-1.5 w-1.5 rounded-full ${gmb.reviewUrl ? "bg-green-500" : "bg-amber-500"}`} />
@@ -52,7 +58,7 @@ export default async function SettingsPage() {
           </span>
         </div>
 
-        <GmbReviewForm reviewUrl={gmb.reviewUrl} messageTemplate={gmb.messageTemplate} />
+        <GmbReviewForm reviewUrl={gmb.reviewUrl} messageTemplate={gmb.messageTemplate} enabled={gmb.enabled} />
 
         <div className="rounded-xl border border-brand-100 bg-brand-50/50 px-4 py-4 text-xs text-brand-700/70 space-y-1.5">
           <p className="font-semibold text-brand-900 text-sm">How it works</p>

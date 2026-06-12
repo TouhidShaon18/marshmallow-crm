@@ -65,9 +65,11 @@ export async function getNuportSettings() {
 // ── GMB Review settings ───────────────────────────────────────────────────────
 
 export async function getGmbSettings() {
-  const reviewUrl     = await getSetting("gmb_review_url");
+  const reviewUrl       = await getSetting("gmb_review_url");
   const messageTemplate = await getSetting("gmb_review_message");
-  return { reviewUrl, messageTemplate };
+  const enabledRaw      = await getSetting("gmb_review_enabled");
+  const enabled         = enabledRaw === "true";
+  return { reviewUrl, messageTemplate, enabled };
 }
 
 export async function saveGmbSettings(
@@ -75,10 +77,11 @@ export async function saveGmbSettings(
   formData: FormData,
 ): Promise<{ error?: string }> {
   await requireOwner();
-  const url = formData.get("reviewUrl")?.toString().trim() ?? "";
-  const msg = formData.get("messageTemplate")?.toString().trim() ?? "";
-  if (!url) return { error: "Review URL is required." };
-  await setSetting("gmb_review_url", url);
+  const url     = formData.get("reviewUrl")?.toString().trim() ?? "";
+  const msg     = formData.get("messageTemplate")?.toString().trim() ?? "";
+  const enabled = formData.get("enabled") === "true";
+  await setSetting("gmb_review_enabled", enabled ? "true" : "false");
+  if (url) await setSetting("gmb_review_url", url);
   await setSetting("gmb_review_message", msg || "Hi {name}, thank you for your purchase! We'd love your feedback — please leave us a quick Google review: {url} 🙏");
   revalidatePath("/settings");
   return {};

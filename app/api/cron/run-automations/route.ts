@@ -69,11 +69,12 @@ export async function GET(req: Request): Promise<Response> {
 
     // 4. GMB review SMS — customers purchased exactly 3 days ago
     let reviewSmsSent = 0;
+    const gmbEnabled  = (await getSetting("gmb_review_enabled")) === "true";
     const gmbUrl      = await getSetting("gmb_review_url");
     const gmbTemplate = await getSetting("gmb_review_message") ??
       "Hi {name}, thank you for your purchase! We'd love your feedback — please leave us a quick Google review: {url} 🙏";
 
-    if (gmbUrl) {
+    if (gmbEnabled && gmbUrl) {
       const windowStart = new Date(Date.now() - 4 * 86_400_000); // 4 days ago
       const windowEnd   = new Date(Date.now() - 3 * 86_400_000); // 3 days ago
 
