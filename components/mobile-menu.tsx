@@ -80,11 +80,11 @@ export default function MobileMenu({ role }: { role: AppRole }) {
       )}
 
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 overflow-y-auto bg-white shadow-2xl transition-transform duration-200 md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-white shadow-2xl transition-transform duration-200 md:hidden ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between border-b border-brand-100 px-5 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-brand-100 px-5 py-4">
           <div className="flex items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-lg">🍡</span>
             <span className="font-bold text-brand-900">Marshmallow</span>
@@ -98,7 +98,7 @@ export default function MobileMenu({ role }: { role: AppRole }) {
           </button>
         </div>
 
-        <nav className="px-3 py-3">
+        <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
           {sections.map((section) => (
             <div key={section.title} className="mt-3">
               <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-brand-400">
