@@ -173,6 +173,8 @@ model Customer {
 
   stage           Stage         @default(NEW_LEAD)
   lastContactedAt DateTime?
+  purchasedAt     DateTime?     // set when stage first moves to PURCHASED
+  reviewSmsSentAt DateTime?     // set when the GMB review SMS fires (3 days after purchasedAt)
   createdAt       DateTime      @default(now())
 
   interactions    Interaction[]

@@ -1,17 +1,18 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth";
-import { getNuportSettings } from "@/app/nuport-actions";
+import { getNuportSettings, getGmbSettings } from "@/app/nuport-actions";
 import NuportApiKeyForm from "@/components/nuport-settings-form";
 import NuportWebhookSecretForm from "@/components/nuport-webhook-secret-form";
 import CopyButton from "@/components/copy-button";
+import GmbReviewForm from "@/components/gmb-review-form";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (user.role !== "OWNER") redirect("/dashboard");
 
-  const nuport = await getNuportSettings();
+  const [nuport, gmb] = await Promise.all([getNuportSettings(), getGmbSettings()]);
 
   const headersList = await headers();
   const host  = headersList.get("host") ?? "your-crm.vercel.app";
@@ -23,6 +24,43 @@ export default async function SettingsPage() {
       <div>
         <h1 className="text-2xl font-bold text-brand-900">Settings</h1>
         <p className="text-sm text-brand-700/70">App configuration and integrations.</p>
+      </div>
+
+      {/* GMB Review Automation */}
+      <div className="card p-6 space-y-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-yellow-100 text-xl">
+            ⭐
+          </div>
+          <div>
+            <h2 className="font-semibold text-brand-900">Google Review SMS</h2>
+            <p className="text-sm text-brand-700/70">
+              Automatically sends customers an SMS asking for a Google review 3 days after their purchase.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium ${
+            gmb.reviewUrl ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+          }`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${gmb.reviewUrl ? "bg-green-500" : "bg-amber-500"}`} />
+            {gmb.reviewUrl ? "Review link configured" : "Review link not set"}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 font-medium text-brand-700">
+            ⏰ Fires daily at 3 am · targets customers purchased 3 days ago
+          </span>
+        </div>
+
+        <GmbReviewForm reviewUrl={gmb.reviewUrl} messageTemplate={gmb.messageTemplate} />
+
+        <div className="rounded-xl border border-brand-100 bg-brand-50/50 px-4 py-4 text-xs text-brand-700/70 space-y-1.5">
+          <p className="font-semibold text-brand-900 text-sm">How it works</p>
+          <p>• When you move a customer to the <strong>Purchased</strong> stage, the clock starts.</p>
+          <p>• 3 days later the daily cron sends the SMS to their WhatsApp number.</p>
+          <p>• Each customer only ever gets one review request (won't repeat).</p>
+          <p>• Requires <strong>BULKSMSBD_API_KEY</strong> and <strong>BULKSMSBD_SENDER_ID</strong> to be set in Vercel environment variables.</p>
+        </div>
       </div>
 
       {/* Nuport Integration */}

@@ -61,3 +61,25 @@ export async function getNuportSettings() {
     totalSynced:   totalSynced ? parseInt(totalSynced) : 0,
   };
 }
+
+// ── GMB Review settings ───────────────────────────────────────────────────────
+
+export async function getGmbSettings() {
+  const reviewUrl     = await getSetting("gmb_review_url");
+  const messageTemplate = await getSetting("gmb_review_message");
+  return { reviewUrl, messageTemplate };
+}
+
+export async function saveGmbSettings(
+  _prev: { error?: string } | undefined,
+  formData: FormData,
+): Promise<{ error?: string }> {
+  await requireOwner();
+  const url = formData.get("reviewUrl")?.toString().trim() ?? "";
+  const msg = formData.get("messageTemplate")?.toString().trim() ?? "";
+  if (!url) return { error: "Review URL is required." };
+  await setSetting("gmb_review_url", url);
+  await setSetting("gmb_review_message", msg || "Hi {name}, thank you for your purchase! We'd love your feedback — please leave us a quick Google review: {url} 🙏");
+  revalidatePath("/settings");
+  return {};
+}

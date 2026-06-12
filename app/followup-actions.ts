@@ -312,8 +312,11 @@ export async function moveStage(formData: FormData): Promise<void> {
   if (!customerId || !stage || !STAGES.includes(stage)) return;
   const customer = await prisma.customer.update({
     where: { id: customerId },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data: { stage: stage as any },
+    data: {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      stage: stage as any,
+      ...(stage === "PURCHASED" ? { purchasedAt: new Date() } : {}),
+    },
   });
   await runEventWorkflows("STAGE_CHANGED", customer);
   revalidatePath("/pipeline");
