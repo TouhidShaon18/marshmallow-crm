@@ -234,7 +234,7 @@ export async function createEmployee(
   const email = str(formData, "email")?.toLowerCase();
   const password = str(formData, "password");
   const rawRole = str(formData, "role") ?? "SALES";
-  const role = (["SALES", "MARKETING"].includes(rawRole) ? rawRole : "SALES") as "SALES" | "MARKETING";
+  const role = (["SALES", "MARKETING", "OWNER"].includes(rawRole) ? rawRole : "SALES") as "SALES" | "MARKETING" | "OWNER";
 
   if (!name || !email || !password) {
     return { error: "Name, email and password are required." };
