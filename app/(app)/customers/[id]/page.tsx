@@ -11,6 +11,7 @@ import CustomerInsight, { CustomerInsightSkeleton } from "@/components/customer-
 import CustomerTags from "@/components/customer-tags";
 import { STAGE_LABEL, STAGE_COLOR, CHANNEL_ICON, type StageKey, type ChannelKey } from "@/lib/labels";
 import DeleteButton from "@/components/delete-button";
+import GuildCard from "@/components/guild-card";
 
 const typeStyle: Record<string, string> = {
   WHATSAPP: "bg-green-100 text-green-700",
@@ -132,6 +133,21 @@ export default async function CustomerDetailPage({
                 <Detail label="Address" value={customer.address} />
               </div>
             </dl>
+          </div>
+
+          {/* Guild loyalty card */}
+          <div className="card p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="text-lg">🍡</span>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-700/70">Marshmallow Guild</h2>
+            </div>
+            <GuildCard
+              customerId={id}
+              stampCount={customer.stampCount}
+              hokageRewardClaimed={customer.hokageRewardClaimed}
+              pirateKingRewardClaimed={customer.pirateKingRewardClaimed}
+              pirateKingRewardItem={customer.pirateKingRewardItem}
+            />
           </div>
 
           <div className="card p-6">

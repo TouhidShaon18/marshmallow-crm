@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import TagBadge from "@/components/tag-badge";
+import { getRank } from "@/app/loyalty-actions";
 
 function daysSince(d: Date | null): number | null {
   if (!d) return null;
@@ -128,6 +129,11 @@ export default async function CustomersPage({
                       </Link>
                       {c.repeatCustomer && (
                         <span className="badge ml-2 bg-amber-100 text-amber-700">repeat</span>
+                      )}
+                      {c.stampCount > 0 && (
+                        <span className="badge ml-2 bg-purple-100 text-purple-700">
+                          {getRank(c.stampCount).icon} {getRank(c.stampCount).name}
+                        </span>
                       )}
                       {c.tags.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1">

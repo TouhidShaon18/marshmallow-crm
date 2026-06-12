@@ -175,6 +175,13 @@ model Customer {
   lastContactedAt DateTime?
   purchasedAt     DateTime?     // set when stage first moves to PURCHASED
   reviewSmsSentAt DateTime?     // set when the GMB review SMS fires (3 days after purchasedAt)
+
+  // ── Guild loyalty card ───────────────────────────────────────────────────
+  stampCount              Int       @default(0)
+  hokageRewardClaimed     Boolean   @default(false)  // stamp 5: 10% off up to ৳1,000
+  pirateKingRewardClaimed Boolean   @default(false)  // stamp 10: gift item OR 50% off
+  pirateKingRewardItem    String?   // which gift item was chosen at stamp 10
+
   createdAt       DateTime      @default(now())
 
   interactions    Interaction[]
