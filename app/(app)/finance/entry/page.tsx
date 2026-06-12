@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, isOwnerRole, isFinanceRole, normaliseRole } from "@/lib/auth";
 import FinanceEntryForm from "@/components/finance-entry-form";
+import PeriodPicker from "@/components/period-picker";
 
 function periodLabel(p: string) {
   const [y, m] = p.split("-");
@@ -35,21 +36,7 @@ export default async function FinanceEntryPage({
         </h1>
       </div>
 
-      {/* Period picker */}
-      <div className="flex items-center gap-3">
-        <label className="text-sm font-medium text-brand-700">Month:</label>
-        <form method="GET">
-          <input
-            type="month"
-            name="period"
-            defaultValue={period}
-            className="input text-sm"
-            onChange={(e) => {
-              if (e.target.form) e.target.form.submit();
-            }}
-          />
-        </form>
-      </div>
+      <PeriodPicker value={period} basePath="/finance/entry" />
 
       <div className="rounded-xl border border-brand-100 bg-white p-5">
         <FinanceEntryForm existing={existing} defaultPeriod={period} />
