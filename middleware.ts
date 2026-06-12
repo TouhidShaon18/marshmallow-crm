@@ -16,6 +16,7 @@ const SALES_ONLY = [
   "/sequences",
   "/tags",
   "/team",
+  "/loyalty",
 ];
 
 // Routes only Marketing (and Owner) can access

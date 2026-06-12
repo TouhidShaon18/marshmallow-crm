@@ -13,6 +13,7 @@ const SALES_LINKS: NavItem[] = [
   { href: "/followups",  label: "Follow-ups",  icon: "⏰" },
   { href: "/tasks",      label: "Today",       icon: "✅" },
   { href: "/pipeline",   label: "Pipeline",    icon: "📋" },
+  { href: "/loyalty",    label: "Loyalty",     icon: "🏆" },
   { href: "/sequences",  label: "Sequences",   icon: "📨" },
   { href: "/tags",       label: "Tags",        icon: "🏷️" },
 ];
