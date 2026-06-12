@@ -77,7 +77,8 @@ function customerDataFromForm(fd: FormData) {
 export async function createCustomer(formData: FormData): Promise<void> {
   await requireUser();
   const data = customerDataFromForm(formData);
-  const customer = await prisma.customer.create({ data });
+  const stampCount = data.orderAmount != null && data.orderAmount >= 1000 ? 1 : 0;
+  const customer = await prisma.customer.create({ data: { ...data, stampCount } });
   await runEventWorkflows("CUSTOMER_CREATED", customer);
   revalidatePath("/customers");
   revalidatePath("/tasks");
@@ -206,7 +207,11 @@ export async function importCustomers(
     return { ok: false, errors: parsed.errors, message: "No customers could be imported." };
   }
 
-  const data = parsed.customers.map((c) => ({ ...c, assignedToId }));
+  const data = parsed.customers.map((c) => ({
+    ...c,
+    assignedToId,
+    stampCount: c.orderAmount != null && c.orderAmount >= 1000 ? 1 : 0,
+  }));
   const result = await prisma.customer.createMany({ data });
 
   revalidatePath("/customers");
