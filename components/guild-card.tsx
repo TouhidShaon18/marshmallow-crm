@@ -1,10 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import {
-  addStamp, removeStamp, claimHokageReward, claimPirateKingReward,
-  getRank, REWARD_ITEMS,
-} from "@/app/loyalty-actions";
+import { addStamp, removeStamp, claimHokageReward, claimPirateKingReward } from "@/app/loyalty-actions";
+import { getRank, REWARD_ITEMS } from "@/lib/loyalty";
 
 const RANK_NAMES = [
   "Scout", "Soul Reaper", "Hunter", "Pro Hero", "Hokage",

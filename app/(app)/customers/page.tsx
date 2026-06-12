@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import TagBadge from "@/components/tag-badge";
-import { getRank } from "@/app/loyalty-actions";
+import { getRank } from "@/lib/loyalty";
 
 function daysSince(d: Date | null): number | null {
   if (!d) return null;
