@@ -38,7 +38,7 @@ function matchesAny(pathname: string, prefixes: string[]) {
   );
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(COOKIE_NAME)?.value;
   if (!token) return NextResponse.next();

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { AppRole } from "@/lib/auth";
 
-type NavItem = { href: string; label: string; icon: string };
+type NavItem = { href: string; label: string; icon: string; exact?: boolean };
 
 const SALES_LINKS: NavItem[] = [
   { href: "/dashboard",  label: "Dashboard",   icon: "📊" },
@@ -27,7 +27,7 @@ const MARKETING_LINKS: NavItem[] = [
 ];
 
 const FINANCE_LINKS: NavItem[] = [
-  { href: "/finance",        label: "Dashboard",    icon: "📈" },
+  { href: "/finance",        label: "Dashboard",    icon: "📈", exact: true },
   { href: "/finance/entry",  label: "P&L Entry",    icon: "📝" },
   { href: "/finance/goals",  label: "Goals",        icon: "🎯" },
 ];
@@ -45,7 +45,9 @@ function NavGroup({ title, items }: { title: string; items: NavItem[] }) {
         {title}
       </p>
       {items.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(item.href + "/");
+        const active = item.exact
+          ? pathname === item.href
+          : pathname === item.href || pathname.startsWith(item.href + "/");
         return (
           <Link
             key={item.href}
