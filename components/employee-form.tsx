@@ -31,6 +31,7 @@ export default function EmployeeForm() {
           <select name="role" className="input" defaultValue="SALES">
             <option value="SALES">🛍️ Sales — customers, follow-ups, pipeline</option>
             <option value="MARKETING">📣 Marketing — broadcasts, campaigns, automations</option>
+            <option value="OWNER">👑 Admin / Owner — full access to everything</option>
           </select>
         </div>
       </div>
