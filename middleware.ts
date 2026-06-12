@@ -29,6 +29,9 @@ const MARKETING_ONLY = [
   "/influencers",
 ];
 
+// Routes only Finance (and Owner) can access
+const FINANCE_ONLY = ["/finance"];
+
 function matchesAny(pathname: string, prefixes: string[]) {
   return prefixes.some(
     (p) => pathname === p || pathname.startsWith(p + "/"),
@@ -52,9 +55,22 @@ export async function middleware(request: NextRequest) {
     }
 
     if (role === "SALES" || role === "EMPLOYEE") {
-      // Sales can't see Marketing-only routes → redirect to their home
-      if (matchesAny(pathname, MARKETING_ONLY)) {
+      // Sales can't see Marketing-only or Finance-only routes
+      if (matchesAny(pathname, MARKETING_ONLY) || matchesAny(pathname, FINANCE_ONLY)) {
         return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+    }
+
+    if (role === "MARKETING") {
+      if (matchesAny(pathname, FINANCE_ONLY)) {
+        return NextResponse.redirect(new URL("/marketing", request.url));
+      }
+    }
+
+    if (role === "FINANCE") {
+      // Finance can only see Finance routes — redirect Sales/Marketing routes
+      if (matchesAny(pathname, SALES_ONLY) || matchesAny(pathname, MARKETING_ONLY)) {
+        return NextResponse.redirect(new URL("/finance", request.url));
       }
     }
   } catch {

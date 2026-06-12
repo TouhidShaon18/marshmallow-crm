@@ -32,6 +32,7 @@ export default function EmployeeForm() {
             <option value="SALES">🛍️ Sales — customers, follow-ups, pipeline</option>
             <option value="MARKETING">📣 Marketing — broadcasts, campaigns, automations</option>
             <option value="OWNER">👑 Admin / Owner — full access to everything</option>
+            <option value="FINANCE">💰 Finance — P&amp;L entries, financial dashboard</option>
           </select>
         </div>
       </div>

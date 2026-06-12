@@ -13,6 +13,7 @@ enum Role {
   EMPLOYEE   // legacy — treated as SALES
   SALES
   MARKETING
+  FINANCE
 }
 
 enum Channel {
@@ -444,4 +445,56 @@ model InfluencerDeal {
   notes         String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+}
+
+// ── Finance module ────────────────────────────────────────────────────────────
+
+// Monthly P&L entry — bookkeeper fills this in each month.
+model FinanceEntry {
+  id      String @id @default(cuid())
+  period  String @unique  // "YYYY-MM"
+
+  // Revenue
+  revenue           Float @default(0)
+
+  // COGS breakdown
+  cogsRawMaterials  Float @default(0)
+  cogsLabour        Float @default(0)
+  cogsPackaging     Float @default(0)
+  cogsDirectProd    Float @default(0)
+  cogsMisc          Float @default(0)
+
+  // Operating Expenses — Fixed
+  opexRent          Float @default(0)
+  opexSalaries      Float @default(0)
+  opexSubscriptions Float @default(0)
+
+  // Operating Expenses — Variable
+  opexUtilities     Float @default(0)
+  opexMarketing     Float @default(0)
+  opexLogistics     Float @default(0)
+  opexMiscVar       Float @default(0)
+
+  // Tax + interest (deducted after EBIT to get Net Profit)
+  taxAndInterest    Float @default(0)
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Monthly financial goals — set by the owner.
+model FinanceGoal {
+  id      String @id @default(cuid())
+  period  String @unique  // "YYYY-MM"
+
+  revenueTarget     Float?
+  netProfitTarget   Float?
+  grossMarginTarget Float?   // percentage, e.g. 40 = 40%
+  opexBudget        Float?
+  marketingBudget   Float?
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

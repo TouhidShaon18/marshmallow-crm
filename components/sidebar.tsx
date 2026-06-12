@@ -26,6 +26,12 @@ const MARKETING_LINKS: NavItem[] = [
   { href: "/automations",      label: "Automations",    icon: "⚡" },
 ];
 
+const FINANCE_LINKS: NavItem[] = [
+  { href: "/finance",        label: "Dashboard",    icon: "📈" },
+  { href: "/finance/entry",  label: "P&L Entry",    icon: "📝" },
+  { href: "/finance/goals",  label: "Goals",        icon: "🎯" },
+];
+
 const MGMT_LINKS: NavItem[] = [
   { href: "/team",     label: "Team",     icon: "🛠️" },
   { href: "/settings", label: "Settings", icon: "⚙️" },
@@ -60,8 +66,9 @@ function NavGroup({ title, items }: { title: string; items: NavItem[] }) {
 }
 
 export default function Sidebar({ role }: { role: AppRole }) {
-  const showSales      = role === "OWNER" || role === "SALES"      || role === "EMPLOYEE";
+  const showSales      = role === "OWNER" || role === "SALES"    || role === "EMPLOYEE";
   const showMarketing  = role === "OWNER" || role === "MARKETING";
+  const showFinance    = role === "OWNER" || role === "FINANCE";
   const showMgmt       = role === "OWNER";
 
   return (
@@ -76,6 +83,7 @@ export default function Sidebar({ role }: { role: AppRole }) {
       <nav className="flex flex-col overflow-y-auto px-3 py-2 pb-6">
         {showSales     && <NavGroup title="Sales"      items={SALES_LINKS} />}
         {showMarketing && <NavGroup title="Marketing"  items={MARKETING_LINKS} />}
+        {showFinance   && <NavGroup title="Finance"    items={FINANCE_LINKS} />}
         {showMgmt      && <NavGroup title="Management" items={MGMT_LINKS} />}
       </nav>
     </aside>

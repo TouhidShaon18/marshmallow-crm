@@ -53,4 +53,7 @@ body {
   .badge {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
+  .section-heading {
+    @apply text-xs font-semibold uppercase tracking-wider text-brand-500 pb-1 border-b border-brand-100 mb-2;
+  }
 }

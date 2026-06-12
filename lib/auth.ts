@@ -9,7 +9,7 @@ const secret = new TextEncoder().encode(
   process.env.AUTH_SECRET ?? "dev-secret-change-me",
 );
 
-export type AppRole = "OWNER" | "SALES" | "MARKETING" | "EMPLOYEE";
+export type AppRole = "OWNER" | "SALES" | "MARKETING" | "EMPLOYEE" | "FINANCE";
 
 export type SessionUser = {
   id: string;
@@ -36,10 +36,15 @@ export function isOwnerRole(role: AppRole) {
   return role === "OWNER";
 }
 
+export function isFinanceRole(role: AppRole) {
+  return role === "FINANCE";
+}
+
 /** Label shown in the UI for a role. */
 export function roleLabel(role: AppRole) {
-  if (role === "OWNER") return "Owner";
+  if (role === "OWNER")    return "Owner";
   if (role === "MARKETING") return "Marketing";
+  if (role === "FINANCE")  return "Finance";
   return "Sales";
 }
 

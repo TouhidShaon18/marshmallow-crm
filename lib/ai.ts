@@ -109,3 +109,54 @@ export function getCustomerInsight(data: CustomerInsightData): Promise<string | 
   const cacheKey = `customer-insight-${data.name}-${data.lastContactedAt?.toISOString() ?? "never"}`;
   return unstable_cache(_getCustomerInsight, [cacheKey], { revalidate: 7200 })(data);
 }
+
+// ---------- Finance Insight ----------
+
+export type FinanceInsightData = {
+  periods: {
+    period: string;
+    revenue: number;
+    grossProfit: number;
+    grossMarginPct: number;
+    netProfit: number;
+    netMarginPct: number;
+    opexTotal: number;
+    opexMarketing: number;
+  }[];
+  goals?: {
+    revenueTarget?: number | null;
+    netProfitTarget?: number | null;
+    grossMarginTarget?: number | null;
+  } | null;
+};
+
+async function _getFinanceInsight(data: FinanceInsightData): Promise<string | null> {
+  const rows = data.periods.map((p) =>
+    `${p.period}: Revenue ৳${p.revenue.toFixed(0)}, Gross Profit ৳${p.grossProfit.toFixed(0)} (${p.grossMarginPct.toFixed(1)}%), Net Profit ৳${p.netProfit.toFixed(0)} (${p.netMarginPct.toFixed(1)}%), OpEx ৳${p.opexTotal.toFixed(0)}, Marketing Spend ৳${p.opexMarketing.toFixed(0)}`
+  ).join("\n");
+
+  const goalText = data.goals
+    ? `Current month goals — Revenue: ${data.goals.revenueTarget ? `৳${data.goals.revenueTarget}` : "not set"}, Net Profit: ${data.goals.netProfitTarget ? `৳${data.goals.netProfitTarget}` : "not set"}, Gross Margin: ${data.goals.grossMarginTarget ? `${data.goals.grossMarginTarget}%` : "not set"}`
+    : "No goals set for this month.";
+
+  return ask(
+    `You are a sharp financial advisor for an anime merchandise store in Bangladesh (Marshmallow).
+
+Monthly P&L data (most recent last):
+${rows}
+
+${goalText}
+
+Give 3 specific, actionable recommendations in plain English. Focus on:
+- What the numbers suggest to do MORE of
+- What to cut or reduce
+- One concrete action to hit this month's targets (if set)
+
+Keep it under 120 words total. No bullet markers — use 1., 2., 3. format.`,
+  );
+}
+
+export function getFinanceInsight(data: FinanceInsightData): Promise<string | null> {
+  const cacheKey = `finance-insight-${data.periods.map((p) => p.period).join("-")}`;
+  return unstable_cache(_getFinanceInsight, [cacheKey], { revalidate: 43200 })(data);
+}
