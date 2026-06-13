@@ -449,10 +449,18 @@ model InfluencerDeal {
 
 // ── Finance module ────────────────────────────────────────────────────────────
 
-// Monthly P&L entry — bookkeeper fills this in each month.
+// Granularity a P&L entry can be logged at.
+enum FinancePeriodType {
+  DAILY    // period = "YYYY-MM-DD"
+  WEEKLY   // period = "YYYY-Www" (ISO week)
+  MONTHLY  // period = "YYYY-MM"
+}
+
+// P&L entry — bookkeeper fills this in daily, weekly, or monthly.
 model FinanceEntry {
-  id      String @id @default(cuid())
-  period  String @unique  // "YYYY-MM"
+  id         String            @id @default(cuid())
+  periodType FinancePeriodType @default(MONTHLY)
+  period     String            // format depends on periodType
 
   // Revenue
   revenue           Float @default(0)
@@ -481,6 +489,8 @@ model FinanceEntry {
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([periodType, period])
 }
 
 // Monthly financial goals — set by the owner.

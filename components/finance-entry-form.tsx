@@ -2,11 +2,13 @@
 
 import { useActionState, useEffect } from "react";
 import { upsertFinanceEntry } from "@/app/finance-actions";
+import type { FinancePeriodType } from "@/lib/finance";
 import type { FinanceEntry } from "@prisma/client";
 
 type Props = {
   existing?: FinanceEntry | null;
-  defaultPeriod: string;
+  periodType: FinancePeriodType;
+  period: string;
 };
 
 function NumField({ name, label, defaultValue = 0 }: { name: string; label: string; defaultValue?: number }) {
@@ -25,7 +27,7 @@ function NumField({ name, label, defaultValue = 0 }: { name: string; label: stri
   );
 }
 
-export default function FinanceEntryForm({ existing, defaultPeriod }: Props) {
+export default function FinanceEntryForm({ existing, periodType, period }: Props) {
   const [state, action, pending] = useActionState(upsertFinanceEntry, undefined);
 
   useEffect(() => {
@@ -38,7 +40,8 @@ export default function FinanceEntryForm({ existing, defaultPeriod }: Props) {
 
   return (
     <form action={action} className="space-y-6">
-      <input type="hidden" name="period" value={existing?.period ?? defaultPeriod} />
+      <input type="hidden" name="periodType" value={periodType} />
+      <input type="hidden" name="period" value={period} />
 
       {/* Revenue */}
       <section>

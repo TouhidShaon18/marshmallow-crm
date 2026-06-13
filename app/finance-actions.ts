@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, isOwnerRole, isFinanceRole, normaliseRole } from "@/lib/auth";
+import { isValidPeriod, type FinancePeriodType } from "@/lib/finance";
 
 async function requireFinance() {
   const user = await getCurrentUser();
@@ -29,8 +30,10 @@ export async function upsertFinanceEntry(
   formData: FormData,
 ): Promise<{ error?: string }> {
   await requireFinance();
+  const periodType = (formData.get("periodType")?.toString() || "MONTHLY") as FinancePeriodType;
+  if (!["DAILY", "WEEKLY", "MONTHLY"].includes(periodType)) return { error: "Invalid period type." };
   const period = formData.get("period")?.toString();
-  if (!period || !/^\d{4}-\d{2}$/.test(period)) return { error: "Invalid period." };
+  if (!period || !isValidPeriod(periodType, period)) return { error: "Invalid period." };
 
   const data = {
     revenue:           f(formData, "revenue"),
@@ -52,8 +55,8 @@ export async function upsertFinanceEntry(
   };
 
   await prisma.financeEntry.upsert({
-    where:  { period },
-    create: { period, ...data },
+    where:  { periodType_period: { periodType, period } },
+    create: { periodType, period, ...data },
     update: data,
   });
 
