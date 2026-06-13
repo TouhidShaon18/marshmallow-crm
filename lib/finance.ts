@@ -50,6 +50,35 @@ export function formatPeriodShort(type: FinancePeriodType, period: string): stri
   const [, w] = period.split("-W"); return `W${+w}`;
 }
 
+// ── Itemized OpEx breakdowns (marketing & utilities) ─────────────────────────
+
+export type LineItem = { label: string; amount: number };
+
+// Suggested categories — the bookkeeper can also type a custom one.
+export const MARKETING_TYPES = [
+  "Facebook Ads", "Instagram Ads", "TikTok Ads", "Google Ads", "Boosted Posts",
+  "Influencer", "Print / Flyers", "Events / Stalls", "Giveaways", "Other",
+] as const;
+
+export const UTILITY_TYPES = [
+  "Electricity", "Water", "Gas", "Internet", "Mobile / Phone", "Other",
+] as const;
+
+/** Safely parse a JSON value (from Prisma) into a list of line items. */
+export function parseLineItems(value: unknown): LineItem[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((it) => {
+      const o = it as { label?: unknown; amount?: unknown };
+      return { label: String(o?.label ?? "").trim(), amount: Number(o?.amount) || 0 };
+    })
+    .filter((it) => it.label !== "" || it.amount !== 0);
+}
+
+export function sumLineItems(items: LineItem[]): number {
+  return items.reduce((t, it) => t + (it.amount || 0), 0);
+}
+
 export type FinanceCalc = {
   period: string;
   revenue: number;

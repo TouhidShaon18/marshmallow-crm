@@ -6,6 +6,7 @@ import {
   calcFinance,
   formatPeriodShort,
   formatPeriodLong,
+  parseLineItems,
   PERIOD_TYPES,
   type FinancePeriodType,
 } from "@/lib/finance";
@@ -120,6 +121,9 @@ export default async function FinanceDashboardPage({
   const maxRev = Math.max(...calcs.map((c) => c.revenue), 1);
   const maxPnl = Math.max(...calcs.map((c) => Math.abs(c.netProfit)), 1);
   const latest = calcs[calcs.length - 1] ?? null;
+  const latestEntry = entries[entries.length - 1] ?? null;
+  const marketingItems = parseLineItems(latestEntry?.opexMarketingItems);
+  const utilityItems = parseLineItems(latestEntry?.opexUtilitiesItems);
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
@@ -217,6 +221,39 @@ export default async function FinanceDashboardPage({
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Marketing & Utilities breakdown for the latest period */}
+          {(marketingItems.length > 0 || utilityItems.length > 0) && (
+            <div className="grid md:grid-cols-2 gap-4">
+              {[
+                { title: "Marketing breakdown", items: marketingItems, total: latestEntry?.opexMarketing ?? 0 },
+                { title: "Utilities breakdown",  items: utilityItems,  total: latestEntry?.opexUtilities ?? 0 },
+              ].filter((g) => g.items.length > 0).map((g) => (
+                <div key={g.title} className="rounded-xl border border-brand-100 bg-white p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold text-brand-700">{g.title}</p>
+                    <span className="text-sm font-bold text-brand-900">{fmt(g.total)}</span>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {g.items.map((it, i) => {
+                      const pct = g.total > 0 ? (it.amount / g.total) * 100 : 0;
+                      return (
+                        <li key={`${it.label}-${i}`} className="text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-brand-700">{it.label || "Untitled"}</span>
+                            <span className="text-brand-600">{fmt(it.amount)} <span className="text-brand-400">({pct.toFixed(0)}%)</span></span>
+                          </div>
+                          <div className="mt-0.5 h-1.5 rounded-full bg-brand-50">
+                            <div className="h-1.5 rounded-full bg-brand-400" style={{ width: `${pct}%` }} />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))}
             </div>
           )}
 

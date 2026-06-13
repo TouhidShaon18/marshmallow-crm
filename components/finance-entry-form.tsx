@@ -2,7 +2,8 @@
 
 import { useActionState, useEffect } from "react";
 import { upsertFinanceEntry } from "@/app/finance-actions";
-import type { FinancePeriodType } from "@/lib/finance";
+import BreakdownField from "@/components/breakdown-field";
+import { MARKETING_TYPES, UTILITY_TYPES, parseLineItems, type FinancePeriodType } from "@/lib/finance";
 import type { FinanceEntry } from "@prisma/client";
 
 type Props = {
@@ -73,14 +74,26 @@ export default function FinanceEntryForm({ existing, periodType, period }: Props
         </div>
       </section>
 
-      {/* OpEx Variable */}
+      {/* OpEx Variable — itemized marketing & utilities */}
+      <BreakdownField
+        prefix="marketing"
+        heading="Marketing"
+        suggestions={MARKETING_TYPES}
+        initial={parseLineItems(e?.opexMarketingItems)}
+      />
+
+      <BreakdownField
+        prefix="utility"
+        heading="Utilities"
+        suggestions={UTILITY_TYPES}
+        initial={parseLineItems(e?.opexUtilitiesItems)}
+      />
+
       <section>
-        <h2 className="section-heading">Operating Expenses — Variable</h2>
-        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-          <NumField name="opexUtilities"  label="Utilities"       defaultValue={e?.opexUtilities  ?? 0} />
-          <NumField name="opexMarketing"  label="Marketing"       defaultValue={e?.opexMarketing  ?? 0} />
-          <NumField name="opexLogistics"  label="Logistics"       defaultValue={e?.opexLogistics  ?? 0} />
-          <NumField name="opexMiscVar"    label="Misc Variable"   defaultValue={e?.opexMiscVar    ?? 0} />
+        <h2 className="section-heading">Other Variable Expenses</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <NumField name="opexLogistics" label="Logistics"     defaultValue={e?.opexLogistics ?? 0} />
+          <NumField name="opexMiscVar"   label="Misc Variable" defaultValue={e?.opexMiscVar   ?? 0} />
         </div>
       </section>
 

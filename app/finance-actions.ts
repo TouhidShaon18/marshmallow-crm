@@ -23,6 +23,17 @@ async function requireOwner() {
 
 const f = (fd: FormData, k: string) => parseFloat(fd.get(k)?.toString() || "0") || 0;
 
+// Zip parallel label[]/amount[] form fields into line items, dropping blanks.
+function readLineItems(fd: FormData, prefix: string) {
+  const labels = fd.getAll(`${prefix}Label`).map((v) => v.toString().trim());
+  const amounts = fd.getAll(`${prefix}Amount`).map((v) => parseFloat(v.toString()) || 0);
+  const items = labels
+    .map((label, i) => ({ label, amount: amounts[i] ?? 0 }))
+    .filter((it) => it.label !== "" || it.amount !== 0);
+  const total = items.reduce((t, it) => t + it.amount, 0);
+  return { items, total };
+}
+
 // ── Finance Entry (P&L) ───────────────────────────────────────────────────────
 
 export async function upsertFinanceEntry(
@@ -35,6 +46,9 @@ export async function upsertFinanceEntry(
   const period = formData.get("period")?.toString();
   if (!period || !isValidPeriod(periodType, period)) return { error: "Invalid period." };
 
+  const marketing = readLineItems(formData, "marketing");
+  const utilities = readLineItems(formData, "utility");
+
   const data = {
     revenue:           f(formData, "revenue"),
     cogsRawMaterials:  f(formData, "cogsRawMaterials"),
@@ -45,8 +59,10 @@ export async function upsertFinanceEntry(
     opexRent:          f(formData, "opexRent"),
     opexSalaries:      f(formData, "opexSalaries"),
     opexSubscriptions: f(formData, "opexSubscriptions"),
-    opexUtilities:     f(formData, "opexUtilities"),
-    opexMarketing:     f(formData, "opexMarketing"),
+    opexUtilities:      utilities.total,
+    opexUtilitiesItems: utilities.items,
+    opexMarketing:      marketing.total,
+    opexMarketingItems: marketing.items,
     opexLogistics:     f(formData, "opexLogistics"),
     opexMiscVar:       f(formData, "opexMiscVar"),
     taxAndInterest:    f(formData, "taxAndInterest"),

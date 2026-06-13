@@ -478,10 +478,14 @@ model FinanceEntry {
   opexSubscriptions Float @default(0)
 
   // Operating Expenses — Variable
-  opexUtilities     Float @default(0)
-  opexMarketing     Float @default(0)
-  opexLogistics     Float @default(0)
-  opexMiscVar       Float @default(0)
+  // opexUtilities / opexMarketing hold the TOTAL; the *Items columns hold the
+  // itemized breakdown as JSON: [{ "label": string, "amount": number }, …]
+  opexUtilities      Float @default(0)
+  opexUtilitiesItems Json?
+  opexMarketing      Float @default(0)
+  opexMarketingItems Json?
+  opexLogistics      Float @default(0)
+  opexMiscVar        Float @default(0)
 
   // Tax + interest (deducted after EBIT to get Net Profit)
   taxAndInterest    Float @default(0)
