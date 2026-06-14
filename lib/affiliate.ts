@@ -8,8 +8,10 @@ export const AFFILIATE_PLATFORMS = [
 export const GENERAL_CATEGORY = "General";
 
 // Suggested product categories (free-text — admin can add their own).
+// Sourced from the live store categories at marshmallow-tech.com.
 export const CATEGORY_SUGGESTIONS = [
-  "General", "Figures", "Apparel", "Accessories", "Posters", "Plushies", "Stationery", "Other",
+  "General", "Electronics", "Speaker", "Headphones", "Laptop", "MacBook",
+  "Gift Items", "Anime", "Sensors", "Other",
 ] as const;
 
 export type TierLike = {
