@@ -38,6 +38,7 @@ export default async function AffiliatesPage() {
           <p className="text-sm text-brand-500">Creator coupons &amp; commission tracking</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {isOwnerRole(role) && <Link href="/affiliates/dashboard" className="btn-secondary text-sm">📊 Performance</Link>}
           <Link href="/affiliates/sales/new" className="btn-secondary text-sm">+ Record sale</Link>
           <Link href="/affiliates/sales/import" className="btn-secondary text-sm">⬆ Import sales</Link>
           {isOwnerRole(role) && <Link href="/affiliates/tiers" className="btn-secondary text-sm">⚙ Commission tiers</Link>}
