@@ -512,3 +512,93 @@ model FinanceGoal {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// ── Affiliate marketing ─────────────────────────────────────────────────────
+
+// Global commission tiers by order-value bracket (admin-set defaults).
+model CommissionTier {
+  id        String  @id @default(cuid())
+  label     String  // e.g. "Under 3k", "3k-10k"
+  minAmount Float    @default(0)  // inclusive lower bound
+  maxAmount Float?               // exclusive upper bound; null = no cap (e.g. 100k+)
+  percent   Float                // default commission %
+  sort      Int      @default(0) // display order
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  overrides AffiliateCommissionOverride[]
+}
+
+// A creator/affiliate we collaborate with, identified by a coupon code.
+model Affiliate {
+  id           String   @id @default(cuid())
+  name         String
+  couponCode   String   @unique
+  platform     String?  // Instagram, TikTok, YouTube, Facebook, etc.
+  socialHandle String?
+  phone        String?
+  email        String?
+  notes        String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  overrides AffiliateCommissionOverride[]
+  sales     AffiliateSale[]
+  payouts   AffiliatePayout[]
+}
+
+// Per-creator override of a tier's commission % (negotiated rate).
+model AffiliateCommissionOverride {
+  id          String         @id @default(cuid())
+  affiliate   Affiliate      @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  affiliateId String
+  tier        CommissionTier @relation(fields: [tierId], references: [id], onDelete: Cascade)
+  tierId      String
+  percent     Float
+
+  @@unique([affiliateId, tierId])
+}
+
+// One coupon-attributed sale, with a snapshot of the commission calc.
+model AffiliateSale {
+  id          String    @id @default(cuid())
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  affiliateId String
+
+  orderAmount Float
+  orderRef    String?   // invoice / order number
+  productName String?
+  soldAt      DateTime  @default(now())
+
+  // Snapshot at entry time so later tier edits don't rewrite history.
+  tierLabel   String
+  percent     Float
+  commission  Float
+
+  paid        Boolean          @default(false)
+  paidAt      DateTime?
+  payout      AffiliatePayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  payoutId    String?
+
+  createdAt   DateTime  @default(now())
+
+  @@index([affiliateId])
+}
+
+// A payout to a creator that settles a batch of unpaid commissions.
+model AffiliatePayout {
+  id          String    @id @default(cuid())
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  affiliateId String
+  amount      Float
+  method      String?   // bKash, bank transfer, cash, etc.
+  reference   String?
+  note        String?
+  paidAt      DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+
+  sales AffiliateSale[]
+
+  @@index([affiliateId])
+}

@@ -27,6 +27,7 @@ const MARKETING_ONLY = [
   "/automations",
   "/social-planner",
   "/influencers",
+  "/affiliates",
 ];
 
 // Routes only Finance (and Owner) can access

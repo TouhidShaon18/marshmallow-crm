@@ -134,6 +134,89 @@ export function parseCustomerFile(buffer: Buffer): ParseResult {
   return { customers, errors, matchedColumns };
 }
 
+// ── Affiliate sales import ────────────────────────────────────────────────────
+
+export type ParsedSale = {
+  couponCode: string;
+  orderAmount: number;
+  orderRef: string | null;
+  productName: string | null;
+  soldAt: Date | null;
+};
+
+const SALE_ALIASES: Record<keyof ParsedSale, string[]> = {
+  couponCode:  ["coupon", "couponcode", "code", "promocode", "voucher", "creator", "creatorcode"],
+  orderAmount: ["orderamount", "amount", "total", "price", "ordervalue", "value", "sale", "saleamount"],
+  orderRef:    ["orderref", "orderid", "order", "invoice", "invoiceno", "ref", "reference", "orderno"],
+  productName: ["product", "productname", "item", "items"],
+  soldAt:      ["date", "solddate", "soldat", "orderdate", "purchasedate", "datetime"],
+};
+
+function buildSaleHeaderMap(headers: string[]): Partial<Record<keyof ParsedSale, string>> {
+  const map: Partial<Record<keyof ParsedSale, string>> = {};
+  for (const header of headers) {
+    const n = norm(header);
+    for (const field of Object.keys(SALE_ALIASES) as (keyof ParsedSale)[]) {
+      if (map[field]) continue;
+      if (SALE_ALIASES[field].includes(n)) { map[field] = header; break; }
+    }
+  }
+  return map;
+}
+
+export type SaleParseResult = { sales: ParsedSale[]; errors: string[]; matchedColumns: string[] };
+
+export function parseSalesFile(buffer: Buffer): SaleParseResult {
+  const errors: string[] = [];
+  const wb = XLSX.read(buffer, { type: "buffer", cellDates: true });
+  const sheetName = wb.SheetNames[0];
+  if (!sheetName) return { sales: [], errors: ["The file has no sheets."], matchedColumns: [] };
+
+  const sheet = wb.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+  if (rows.length === 0) return { sales: [], errors: ["No data rows found in the file."], matchedColumns: [] };
+
+  const headers = Object.keys(rows[0]);
+  const hmap = buildSaleHeaderMap(headers);
+  if (!hmap.couponCode || !hmap.orderAmount) {
+    return {
+      sales: [],
+      errors: ['Could not find a "Coupon" and "Amount" column. Make sure the first row has headers like Coupon, Amount, Order, Date.'],
+      matchedColumns: [],
+    };
+  }
+
+  const get = (row: Record<string, unknown>, field: keyof ParsedSale) =>
+    hmap[field] ? row[hmap[field] as string] : undefined;
+
+  const sales: ParsedSale[] = [];
+  rows.forEach((row, i) => {
+    const couponCode = toStr(get(row, "couponCode"));
+    const orderAmount = toNumber(get(row, "orderAmount"));
+    if (!couponCode) { errors.push(`Row ${i + 2}: skipped — no coupon code.`); return; }
+    if (orderAmount == null || orderAmount <= 0) { errors.push(`Row ${i + 2}: skipped — invalid amount.`); return; }
+    sales.push({
+      couponCode,
+      orderAmount,
+      orderRef: toStr(get(row, "orderRef")),
+      productName: toStr(get(row, "productName")),
+      soldAt: toDate(get(row, "soldAt")),
+    });
+  });
+
+  const matchedColumns = (Object.keys(hmap) as (keyof ParsedSale)[]).map((f) => f);
+  return { sales, errors, matchedColumns };
+}
+
+export function buildSalesTemplateBuffer(): Buffer {
+  const headers = ["Coupon", "Amount", "Order", "Product", "Date"];
+  const example = ["AIKO10", 4500, "INV-1023", "Naruto Hoodie (L)", "2026-06-13"];
+  const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Affiliate Sales");
+  return XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
+}
+
 // Builds a downloadable .xlsx template with headers + one example row.
 export function buildTemplateBuffer(): Buffer {
   const headers = [

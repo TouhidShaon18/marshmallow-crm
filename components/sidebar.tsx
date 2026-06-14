@@ -23,6 +23,7 @@ const MARKETING_LINKS: NavItem[] = [
   { href: "/broadcasts",       label: "Broadcasts",     icon: "📣" },
   { href: "/campaigns",        label: "Campaigns",      icon: "🚀" },
   { href: "/influencers",      label: "Influencers",    icon: "🌟" },
+  { href: "/affiliates",       label: "Affiliates",     icon: "🤝" },
   { href: "/automations",      label: "Automations",    icon: "⚡" },
 ];
 
