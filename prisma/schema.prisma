@@ -518,6 +518,7 @@ model FinanceGoal {
 // Global commission tiers by order-value bracket (admin-set defaults).
 model CommissionTier {
   id        String  @id @default(cuid())
+  category  String  @default("General") // product category; "General" = fallback for any category
   label     String  // e.g. "Under 3k", "3k-10k"
   minAmount Float    @default(0)  // inclusive lower bound
   maxAmount Float?               // exclusive upper bound; null = no cap (e.g. 100k+)
@@ -569,6 +570,7 @@ model AffiliateSale {
   orderAmount Float
   orderRef    String?   // invoice / order number
   productName String?
+  category    String?   // product category used to pick the commission tier
   soldAt      DateTime  @default(now())
 
   // Snapshot at entry time so later tier edits don't rewrite history.

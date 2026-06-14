@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, isOwnerRole, isMarketingRole, normaliseRole } from "@/lib/auth";
 import RecordSaleForm from "@/components/record-sale-form";
-import type { TierLike } from "@/lib/affiliate";
+import { tierCategories, type TierLike } from "@/lib/affiliate";
 
 export default async function RecordSalePage({
   searchParams,
@@ -49,7 +49,7 @@ export default async function RecordSalePage({
         </div>
       ) : (
         <div className="rounded-xl border border-brand-100 bg-white p-5">
-          <RecordSaleForm affiliates={affiliates} tiers={tiers as TierLike[]} defaultAffiliateId={params.affiliate} />
+          <RecordSaleForm affiliates={affiliates} tiers={tiers as TierLike[]} categories={tierCategories(tiers)} defaultAffiliateId={params.affiliate} />
         </div>
       )}
     </div>

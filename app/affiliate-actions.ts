@@ -110,6 +110,7 @@ export async function saveTiers(
   formData: FormData,
 ): Promise<{ error?: string }> {
   await requireOwner();
+  const cats = formData.getAll("tierCategory").map((v) => v.toString().trim());
   const labels = formData.getAll("tierLabel").map((v) => v.toString().trim());
   const mins = formData.getAll("tierMin").map((v) => parseFloat(v.toString()) || 0);
   const maxes = formData.getAll("tierMax").map((v) => v.toString().trim());
@@ -119,6 +120,7 @@ export async function saveTiers(
   const rows = labels
     .map((label, i) => ({
       id: ids[i] || null,
+      category: cats[i] || "General",
       label,
       minAmount: mins[i] ?? 0,
       maxAmount: maxes[i] === "" ? null : parseFloat(maxes[i]) || null,
@@ -134,11 +136,11 @@ export async function saveTiers(
     if (r.id) {
       await prisma.commissionTier.update({
         where: { id: r.id },
-        data: { label: r.label, minAmount: r.minAmount, maxAmount: r.maxAmount, percent: r.percent, sort: r.sort },
+        data: { category: r.category, label: r.label, minAmount: r.minAmount, maxAmount: r.maxAmount, percent: r.percent, sort: r.sort },
       });
     } else {
       await prisma.commissionTier.create({
-        data: { label: r.label, minAmount: r.minAmount, maxAmount: r.maxAmount, percent: r.percent, sort: r.sort },
+        data: { category: r.category, label: r.label, minAmount: r.minAmount, maxAmount: r.maxAmount, percent: r.percent, sort: r.sort },
       });
     }
   }
@@ -166,14 +168,14 @@ export async function saveOverrides(affiliateId: string, formData: FormData): Pr
 
 // ── Commission calculation (server) ──────────────────────────────────────────
 
-async function computeFor(affiliateId: string, amount: number) {
+async function computeFor(affiliateId: string, amount: number, category: string) {
   const [tiers, overrides] = await Promise.all([
     prisma.commissionTier.findMany({ orderBy: { minAmount: "asc" } }),
     prisma.affiliateCommissionOverride.findMany({ where: { affiliateId } }),
   ]);
   const ovMap: Record<string, number> = {};
   overrides.forEach((o) => { ovMap[o.tierId] = o.percent; });
-  return resolveCommission(tiers as TierLike[], amount, ovMap);
+  return resolveCommission(tiers as TierLike[], amount, ovMap, category);
 }
 
 // ── Sales ─────────────────────────────────────────────────────────────────────
@@ -191,7 +193,8 @@ export async function recordSale(
   const tierCount = await prisma.commissionTier.count();
   if (tierCount === 0) return { error: "Set up commission tiers first (Commission tiers page)." };
 
-  const { tierLabel, percent, commission } = await computeFor(affiliateId, orderAmount);
+  const category = s(formData, "category") || "General";
+  const { tierLabel, percent, commission } = await computeFor(affiliateId, orderAmount, category);
   const soldAtStr = s(formData, "soldAt");
 
   await prisma.affiliateSale.create({
@@ -200,6 +203,7 @@ export async function recordSale(
       orderAmount,
       orderRef:    s(formData, "orderRef"),
       productName: s(formData, "productName"),
+      category,
       soldAt:      soldAtStr ? new Date(soldAtStr) : new Date(),
       tierLabel, percent, commission,
     },
@@ -253,7 +257,7 @@ export async function importSales(
   const errors = [...parsed.errors];
   const data: {
     affiliateId: string; orderAmount: number; orderRef: string | null; productName: string | null;
-    soldAt: Date; tierLabel: string; percent: number; commission: number;
+    category: string; soldAt: Date; tierLabel: string; percent: number; commission: number;
   }[] = [];
 
   for (const row of parsed.sales) {
@@ -261,12 +265,14 @@ export async function importSales(
     if (!aff) { unmatched.add(row.couponCode); continue; }
     const ovMap: Record<string, number> = {};
     aff.overrides.forEach((o) => { ovMap[o.tierId] = o.percent; });
-    const { tierLabel, percent, commission } = resolveCommission(tiers as TierLike[], row.orderAmount, ovMap);
+    const category = row.category || "General";
+    const { tierLabel, percent, commission } = resolveCommission(tiers as TierLike[], row.orderAmount, ovMap, category);
     data.push({
       affiliateId: aff.id,
       orderAmount: row.orderAmount,
       orderRef: row.orderRef,
       productName: row.productName,
+      category,
       soldAt: row.soldAt ?? new Date(),
       tierLabel, percent, commission,
     });

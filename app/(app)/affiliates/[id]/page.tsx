@@ -36,7 +36,7 @@ export default async function AffiliateDetailPage({
         payouts: { orderBy: { paidAt: "desc" } },
       },
     }),
-    prisma.commissionTier.findMany({ orderBy: { sort: "asc" } }),
+    prisma.commissionTier.findMany({ orderBy: [{ category: "asc" }, { minAmount: "asc" }] }),
   ]);
   if (!affiliate) notFound();
 
@@ -149,12 +149,12 @@ export default async function AffiliateDetailPage({
               Leave a row blank to use the default rate, or enter a custom % to override it for {affiliate.name}.
             </p>
             <div className="hidden sm:grid grid-cols-[1.6fr_0.7fr_1fr] gap-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-brand-400">
-              <span>Bracket</span><span>Default</span><span>Override %</span>
+              <span>Category · Bracket</span><span>Default</span><span>Override %</span>
             </div>
             {tiers.map((t) => (
               <div key={t.id} className="grid grid-cols-[1.6fr_0.7fr_1fr] gap-2 items-center">
                 <input type="hidden" name="overrideTierId" value={t.id} />
-                <span className="text-sm text-brand-700">{t.label}</span>
+                <span className="text-sm text-brand-700"><span className="text-brand-400">{t.category}</span> · {t.label}</span>
                 <span className="text-sm text-brand-400">{t.percent}%</span>
                 <input
                   name="overrideValue"
@@ -174,7 +174,7 @@ export default async function AffiliateDetailPage({
             <tbody className="divide-y divide-brand-50">
               {tiers.map((t) => (
                 <tr key={t.id}>
-                  <td className="py-1.5 text-brand-700">{t.label}</td>
+                  <td className="py-1.5 text-brand-700"><span className="text-brand-400">{t.category}</span> · {t.label}</td>
                   <td className="py-1.5 text-right font-medium text-brand-800">
                     {overrideMap[t.id] ?? t.percent}%
                     {overrideMap[t.id] != null && <span className="ml-1 text-xs text-brand-400">(custom)</span>}
@@ -216,7 +216,10 @@ export default async function AffiliateDetailPage({
                     {s.productName && <span className="block text-xs text-brand-400">{s.productName}</span>}
                   </td>
                   <td className="px-4 py-2 text-right text-brand-700">{taka(s.orderAmount)}</td>
-                  <td className="px-4 py-2 text-brand-500">{s.tierLabel}</td>
+                  <td className="px-4 py-2 text-brand-500">
+                    {s.tierLabel}
+                    {s.category && <span className="block text-xs text-brand-400">{s.category}</span>}
+                  </td>
                   <td className="px-4 py-2 text-right text-brand-500">{s.percent}%</td>
                   <td className="px-4 py-2 text-right font-medium text-brand-800">{taka(s.commission)}</td>
                   <td className="px-4 py-2 text-center">

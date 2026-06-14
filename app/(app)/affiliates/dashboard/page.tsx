@@ -56,6 +56,7 @@ export default async function AffiliateDashboardPage({
   let totalRevenue = 0, totalCommission = 0, totalOwed = 0, totalPaid = 0, totalOrders = 0, activeCreators = 0;
   const monthly: Record<string, { revenue: number; commission: number }> = {};
   const byTier: Record<string, { commission: number; orders: number }> = {};
+  const byCategory: Record<string, { commission: number; orders: number; revenue: number }> = {};
 
   const leaderboard = affiliates.map((a) => {
     const sales = a.sales.filter((s) => inRange(s.soldAt));
@@ -77,6 +78,11 @@ export default async function AffiliateDashboardPage({
       monthly[period].commission += s.commission;
       (byTier[s.tierLabel] ??= { commission: 0, orders: 0 }).commission += s.commission;
       byTier[s.tierLabel].orders += 1;
+      const cat = s.category || "General";
+      (byCategory[cat] ??= { commission: 0, orders: 0, revenue: 0 });
+      byCategory[cat].commission += s.commission;
+      byCategory[cat].orders += 1;
+      byCategory[cat].revenue += s.orderAmount;
     }
 
     return { id: a.id, name: a.name, couponCode: a.couponCode, platform: a.platform, active: a.active,
@@ -100,6 +106,9 @@ export default async function AffiliateDashboardPage({
   // Tier distribution (sorted by commission desc)
   const tierRows = Object.entries(byTier).map(([label, v]) => ({ label, ...v })).sort((a, b) => b.commission - a.commission);
   const maxTierCommission = Math.max(...tierRows.map((t) => t.commission), 1);
+
+  const catRows = Object.entries(byCategory).map(([label, v]) => ({ label, ...v })).sort((a, b) => b.commission - a.commission);
+  const maxCatCommission = Math.max(...catRows.map((c) => c.commission), 1);
 
   const maxLbCommission = Math.max(...leaderboard.map((l) => l.commission), 1);
   const topPerformer = [...leaderboard].sort((a, b) => b.commission - a.commission)[0];
@@ -198,6 +207,27 @@ export default async function AffiliateDashboardPage({
                 })}
               </ul>
             </div>
+          </div>
+
+          {/* Commission by category */}
+          <div className="rounded-xl border border-brand-100 bg-white p-4">
+            <p className="text-sm font-semibold text-brand-700 mb-3">Commission by category</p>
+            <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+              {catRows.map((c) => {
+                const pct = (c.commission / maxCatCommission) * 100;
+                return (
+                  <li key={c.label} className="text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-brand-700">{c.label} <span className="text-brand-400">· {taka(c.revenue)} sales</span></span>
+                      <span className="text-brand-600 font-medium">{taka(c.commission)}</span>
+                    </div>
+                    <div className="mt-0.5 h-1.5 rounded-full bg-brand-50">
+                      <div className="h-1.5 rounded-full bg-brand-500" style={{ width: `${pct}%` }} />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
 
           {/* Leaderboard */}

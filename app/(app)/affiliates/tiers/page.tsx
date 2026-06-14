@@ -10,7 +10,7 @@ export default async function TiersPage() {
   if (!user) redirect("/login");
   if (!isOwnerRole(normaliseRole(user.role))) redirect("/affiliates");
 
-  const tiers = await prisma.commissionTier.findMany({ orderBy: { sort: "asc" } });
+  const tiers = await prisma.commissionTier.findMany({ orderBy: [{ category: "asc" }, { minAmount: "asc" }] });
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-6">

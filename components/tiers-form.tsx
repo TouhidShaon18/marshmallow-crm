@@ -1,14 +1,16 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useId, useState } from "react";
 import { saveTiers } from "@/app/affiliate-actions";
+import { CATEGORY_SUGGESTIONS } from "@/lib/affiliate";
 import type { CommissionTier } from "@prisma/client";
 
 let seq = 0;
-type Row = { key: string; id: string; label: string; min: string; max: string; percent: string };
+type Row = { key: string; id: string; category: string; label: string; min: string; max: string; percent: string };
 const newRow = (t?: CommissionTier): Row => ({
   key: `t${seq++}`,
   id: t?.id ?? "",
+  category: t?.category ?? "General",
   label: t?.label ?? "",
   min: t ? String(t.minAmount) : "0",
   max: t?.maxAmount != null ? String(t.maxAmount) : "",
@@ -18,27 +20,35 @@ const newRow = (t?: CommissionTier): Row => ({
 export default function TiersForm({ tiers }: { tiers: CommissionTier[] }) {
   const [state, action, pending] = useActionState(saveTiers, undefined);
   const [rows, setRows] = useState<Row[]>(tiers.length ? tiers.map((t) => newRow(t)) : [newRow()]);
+  const catListId = useId();
 
   const update = (key: string, patch: Partial<Row>) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   const remove = (key: string) => setRows((rs) => rs.filter((r) => r.key !== key));
-  const add = () => setRows((rs) => [...rs, newRow()]);
+  const add = (category = "General") => setRows((rs) => [...rs, { ...newRow(), category }]);
 
   return (
     <form action={action} className="space-y-3">
-      <div className="hidden sm:grid grid-cols-[1.4fr_0.8fr_0.8fr_0.7fr_auto] gap-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-brand-400">
+      <datalist id={catListId}>
+        {CATEGORY_SUGGESTIONS.map((c) => <option key={c} value={c} />)}
+      </datalist>
+
+      <div className="hidden sm:grid grid-cols-[1fr_1.3fr_0.7fr_0.7fr_0.6fr_auto] gap-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-brand-400">
+        <span>Category</span>
         <span>Bracket label</span>
         <span>Min ৳ (incl.)</span>
         <span>Max ৳ (excl.)</span>
-        <span>Commission %</span>
+        <span>Comm. %</span>
         <span />
       </div>
 
       {rows.map((r) => (
-        <div key={r.key} className="grid grid-cols-2 sm:grid-cols-[1.4fr_0.8fr_0.8fr_0.7fr_auto] gap-2 items-center">
+        <div key={r.key} className="grid grid-cols-2 sm:grid-cols-[1fr_1.3fr_0.7fr_0.7fr_0.6fr_auto] gap-2 items-center">
+          <input name="tierCategory" list={catListId} value={r.category} onChange={(e) => update(r.key, { category: e.target.value })}
+            placeholder="General" className="input" />
           <input type="hidden" name="tierId" value={r.id} />
           <input name="tierLabel" value={r.label} onChange={(e) => update(r.key, { label: e.target.value })}
-            placeholder="Under ৳3,000" className="input col-span-2 sm:col-span-1" />
+            placeholder="Under ৳3,000" className="input" />
           <input name="tierMin" type="number" min={0} value={r.min} onChange={(e) => update(r.key, { min: e.target.value })}
             placeholder="0" className="input" />
           <input name="tierMax" type="number" min={0} value={r.max} onChange={(e) => update(r.key, { max: e.target.value })}
@@ -50,7 +60,7 @@ export default function TiersForm({ tiers }: { tiers: CommissionTier[] }) {
         </div>
       ))}
 
-      <button type="button" onClick={add} className="text-sm font-medium text-brand-600 hover:text-brand-700">
+      <button type="button" onClick={() => add()} className="text-sm font-medium text-brand-600 hover:text-brand-700">
         + Add bracket
       </button>
 
@@ -61,8 +71,10 @@ export default function TiersForm({ tiers }: { tiers: CommissionTier[] }) {
           {pending ? "Saving…" : "Save tiers"}
         </button>
         <p className="mt-2 text-xs text-brand-400">
-          Leave Max blank for the top, open-ended bracket (e.g. ৳100,000+). Editing a bracket only affects
-          future sales — past commissions keep the rate they were recorded at.
+          Group brackets by <span className="font-medium">Category</span> (e.g. Figures, Apparel). The
+          {" "}<span className="font-medium">General</span> category is the fallback used when a sale&apos;s category
+          has no matching bracket. Leave Max blank for the open-ended top bracket (e.g. ৳100,000+). Editing a bracket
+          only affects future sales.
         </p>
       </div>
     </form>

@@ -141,6 +141,7 @@ export type ParsedSale = {
   orderAmount: number;
   orderRef: string | null;
   productName: string | null;
+  category: string | null;
   soldAt: Date | null;
 };
 
@@ -149,6 +150,7 @@ const SALE_ALIASES: Record<keyof ParsedSale, string[]> = {
   orderAmount: ["orderamount", "amount", "total", "price", "ordervalue", "value", "sale", "saleamount"],
   orderRef:    ["orderref", "orderid", "order", "invoice", "invoiceno", "ref", "reference", "orderno"],
   productName: ["product", "productname", "item", "items"],
+  category:    ["category", "producttype", "type", "cat", "segment"],
   soldAt:      ["date", "solddate", "soldat", "orderdate", "purchasedate", "datetime"],
 };
 
@@ -200,6 +202,7 @@ export function parseSalesFile(buffer: Buffer): SaleParseResult {
       orderAmount,
       orderRef: toStr(get(row, "orderRef")),
       productName: toStr(get(row, "productName")),
+      category: toStr(get(row, "category")),
       soldAt: toDate(get(row, "soldAt")),
     });
   });
@@ -209,8 +212,8 @@ export function parseSalesFile(buffer: Buffer): SaleParseResult {
 }
 
 export function buildSalesTemplateBuffer(): Buffer {
-  const headers = ["Coupon", "Amount", "Order", "Product", "Date"];
-  const example = ["AIKO10", 4500, "INV-1023", "Naruto Hoodie (L)", "2026-06-13"];
+  const headers = ["Coupon", "Amount", "Category", "Order", "Product", "Date"];
+  const example = ["AIKO10", 4500, "Apparel", "INV-1023", "Naruto Hoodie (L)", "2026-06-13"];
   const ws = XLSX.utils.aoa_to_sheet([headers, example]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Affiliate Sales");
