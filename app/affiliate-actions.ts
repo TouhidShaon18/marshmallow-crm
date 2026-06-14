@@ -6,6 +6,8 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser, isOwnerRole, isMarketingRole, normaliseRole } from "@/lib/auth";
 import { resolveCommission, DEFAULT_TIERS, type TierLike } from "@/lib/affiliate";
 import { parseSalesFile } from "@/lib/import";
+import { setSetting } from "@/lib/nuport-sync";
+import { syncWooCommerce, type WooSyncResult } from "@/lib/woo";
 
 // Marketing + Owner may manage creators & sales.
 async function requireMarketing() {
@@ -293,6 +295,40 @@ export async function importSales(
 }
 
 // ── Payouts ─────────────────────────────────────────────────────────────────
+
+// ── WooCommerce auto-sync (owner) ────────────────────────────────────────────
+
+export async function saveWooSettings(
+  _prev: { error?: string; ok?: boolean } | undefined,
+  formData: FormData,
+): Promise<{ error?: string; ok?: boolean }> {
+  await requireOwner();
+  const rawUrl = s(formData, "storeUrl");
+  const enabled = formData.get("enabled") === "true";
+
+  if (rawUrl && !/^https?:\/\//i.test(rawUrl)) return { error: "Store URL must start with https://" };
+  if (rawUrl) await setSetting("woo_store_url", rawUrl.replace(/\/+$/, ""));
+
+  // Only overwrite key/secret if new values were entered (blank = keep existing).
+  const key = s(formData, "consumerKey");
+  const secret = s(formData, "consumerSecret");
+  if (key) await setSetting("woo_consumer_key", key);
+  if (secret) await setSetting("woo_consumer_secret", secret);
+
+  await setSetting("woo_sync_enabled", enabled ? "true" : "false");
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
+export async function syncWooNow(
+  _prev: WooSyncResult | undefined,
+): Promise<WooSyncResult> {
+  await requireOwner();
+  const result = await syncWooCommerce();
+  revalidatePath("/affiliates");
+  revalidatePath("/settings");
+  return result;
+}
 
 export async function recordPayout(affiliateId: string, formData: FormData): Promise<void> {
   await requireMarketing();

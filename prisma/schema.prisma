@@ -571,6 +571,7 @@ model AffiliateSale {
   orderRef    String?   // invoice / order number
   productName String?
   category    String?   // product category used to pick the commission tier
+  externalId  String?   @unique // e.g. "woo-{orderId}-{lineId}" — dedupes auto-synced rows
   soldAt      DateTime  @default(now())
 
   // Snapshot at entry time so later tier edits don't rewrite history.

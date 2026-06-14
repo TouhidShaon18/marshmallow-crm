@@ -2,17 +2,19 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth";
 import { getNuportSettings, getGmbSettings } from "@/app/nuport-actions";
+import { getWooSettings } from "@/lib/woo";
 import NuportApiKeyForm from "@/components/nuport-settings-form";
 import NuportWebhookSecretForm from "@/components/nuport-webhook-secret-form";
 import CopyButton from "@/components/copy-button";
 import GmbReviewForm from "@/components/gmb-review-form";
+import WooSettingsForm from "@/components/woo-settings-form";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (user.role !== "OWNER") redirect("/dashboard");
 
-  const [nuport, gmb] = await Promise.all([getNuportSettings(), getGmbSettings()]);
+  const [nuport, gmb, woo] = await Promise.all([getNuportSettings(), getGmbSettings(), getWooSettings()]);
 
   const headersList = await headers();
   const host  = headersList.get("host") ?? "your-crm.vercel.app";
@@ -66,6 +68,46 @@ export default async function SettingsPage() {
           <p>• 3 days later the daily cron sends the SMS to their WhatsApp number.</p>
           <p>• Each customer only ever gets one review request (won't repeat).</p>
           <p>• Requires <strong>BULKSMSBD_API_KEY</strong> and <strong>BULKSMSBD_SENDER_ID</strong> to be set in Vercel environment variables.</p>
+        </div>
+      </div>
+
+      {/* WooCommerce Affiliate Sync */}
+      <div className="card p-6 space-y-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-xl">🛒</div>
+          <div>
+            <h2 className="font-semibold text-brand-900">WooCommerce Affiliate Sync</h2>
+            <p className="text-sm text-brand-700/70">
+              Automatically pull completed orders that used a creator&apos;s coupon and calculate commissions daily.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium ${woo.enabled ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${woo.enabled ? "bg-green-500" : "bg-gray-400"}`} />
+            {woo.enabled ? "Auto-sync on" : "Auto-sync off"}
+          </span>
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium ${woo.hasKey ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${woo.hasKey ? "bg-green-500" : "bg-amber-500"}`} />
+            {woo.hasKey ? "API keys saved" : "API keys not set"}
+          </span>
+          {woo.lastSync && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 font-medium text-brand-700">
+              🕐 Last sync: {new Date(woo.lastSync).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+            </span>
+          )}
+        </div>
+
+        <WooSettingsForm storeUrl={woo.storeUrl} hasKey={woo.hasKey} maskedKey={woo.maskedKey} enabled={woo.enabled} />
+
+        <div className="rounded-xl border border-brand-100 bg-brand-50/50 px-4 py-4 text-xs text-brand-700/70 space-y-1.5">
+          <p className="font-semibold text-brand-900 text-sm">How it works</p>
+          <p>• In WooCommerce → <strong>Settings → Advanced → REST API</strong>, add a key with <strong>Read</strong> permission and paste the Consumer Key &amp; Secret above.</p>
+          <p>• The daily cron pulls <strong>completed</strong> orders changed since the last sync.</p>
+          <p>• Each order line that used a creator&apos;s coupon becomes a commission, priced by that product&apos;s <strong>category</strong> and amount.</p>
+          <p>• Already-synced lines are skipped, so it&apos;s safe to run repeatedly. Use <strong>Sync now</strong> to test.</p>
+          <p>• Set up your <strong>commission tiers</strong> and <strong>creators</strong> (with their coupon codes) first.</p>
         </div>
       </div>
 
