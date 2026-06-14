@@ -2,14 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isSuperAdminRole } from "@/lib/auth";
 import { getSetting, setSetting } from "@/lib/nuport-sync";
 import { testNuportApiKey } from "@/lib/nuport";
 
+// Integrations & API keys are Super-Admin-only.
 async function requireOwner() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (user.role !== "OWNER") redirect("/dashboard");
+  if (!isSuperAdminRole(user.role)) redirect("/dashboard");
   return user;
 }
 

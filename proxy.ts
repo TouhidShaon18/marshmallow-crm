@@ -74,6 +74,13 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(new URL("/finance", request.url));
       }
     }
+
+    if (role === "ADMIN") {
+      // Admins have full access EXCEPT API keys & integrations (Settings).
+      if (matchesAny(pathname, ["/settings"])) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+    }
   } catch {
     // Expired / invalid JWT — let the page-level auth handle it
   }

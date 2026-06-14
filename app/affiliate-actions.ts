@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, isOwnerRole, isMarketingRole, normaliseRole } from "@/lib/auth";
+import { getCurrentUser, isOwnerRole, isMarketingRole, isSuperAdminRole, normaliseRole } from "@/lib/auth";
 import { resolveCommission, DEFAULT_TIERS, type TierLike } from "@/lib/affiliate";
 import { parseSalesFile } from "@/lib/import";
 import { setSetting } from "@/lib/nuport-sync";
@@ -18,11 +18,19 @@ async function requireMarketing() {
   return user;
 }
 
-// Only the owner (admin) sets commission rates.
+// Admins (and Super Admins) set commission rates & tiers — these aren't API keys.
 async function requireOwner() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (!isOwnerRole(normaliseRole(user.role))) redirect("/affiliates");
+  return user;
+}
+
+// The WooCommerce integration (keys/sync) is Super-Admin-only.
+async function requireSuperAdmin() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  if (!isSuperAdminRole(normaliseRole(user.role))) redirect("/affiliates");
   return user;
 }
 
@@ -302,7 +310,7 @@ export async function saveWooSettings(
   _prev: { error?: string; ok?: boolean } | undefined,
   formData: FormData,
 ): Promise<{ error?: string; ok?: boolean }> {
-  await requireOwner();
+  await requireSuperAdmin();
   const rawUrl = s(formData, "storeUrl");
   const enabled = formData.get("enabled") === "true";
 
@@ -323,7 +331,7 @@ export async function saveWooSettings(
 export async function syncWooNow(
   _prev: WooSyncResult | undefined,
 ): Promise<WooSyncResult> {
-  await requireOwner();
+  await requireSuperAdmin();
   const result = await syncWooCommerce();
   revalidatePath("/affiliates");
   revalidatePath("/settings");

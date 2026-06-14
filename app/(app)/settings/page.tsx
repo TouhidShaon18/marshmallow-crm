@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isSuperAdminRole } from "@/lib/auth";
 import { getNuportSettings, getGmbSettings } from "@/app/nuport-actions";
 import { getWooSettings } from "@/lib/woo";
 import NuportApiKeyForm from "@/components/nuport-settings-form";
@@ -12,7 +12,7 @@ import WooSettingsForm from "@/components/woo-settings-form";
 export default async function SettingsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (user.role !== "OWNER") redirect("/dashboard");
+  if (!isSuperAdminRole(user.role)) redirect("/dashboard");
 
   const [nuport, gmb, woo] = await Promise.all([getNuportSettings(), getGmbSettings(), getWooSettings()]);
 

@@ -33,10 +33,8 @@ const FINANCE_LINKS: NavItem[] = [
   { href: "/finance/goals",  label: "Goals",        icon: "🎯" },
 ];
 
-const MGMT_LINKS: NavItem[] = [
-  { href: "/team",     label: "Team",     icon: "🛠️" },
-  { href: "/settings", label: "Settings", icon: "⚙️" },
-];
+const TEAM_LINK: NavItem     = { href: "/team",     label: "Team",     icon: "🛠️" };
+const SETTINGS_LINK: NavItem = { href: "/settings", label: "Settings", icon: "⚙️" };
 
 function NavGroup({ title, items }: { title: string; items: NavItem[] }) {
   const pathname = usePathname();
@@ -69,10 +67,15 @@ function NavGroup({ title, items }: { title: string; items: NavItem[] }) {
 }
 
 export default function Sidebar({ role }: { role: AppRole }) {
-  const showSales      = role === "OWNER" || role === "SALES"    || role === "EMPLOYEE";
-  const showMarketing  = role === "OWNER" || role === "MARKETING";
-  const showFinance    = role === "OWNER" || role === "FINANCE";
-  const showMgmt       = role === "OWNER";
+  const isAdmin = role === "OWNER" || role === "ADMIN"; // elevated access
+  const isSuper = role === "OWNER";                     // super admin only
+  const showSales      = isAdmin || role === "SALES" || role === "EMPLOYEE";
+  const showMarketing  = isAdmin || role === "MARKETING";
+  const showFinance    = isAdmin || role === "FINANCE";
+  const mgmtLinks = [
+    ...(isAdmin ? [TEAM_LINK] : []),
+    ...(isSuper ? [SETTINGS_LINK] : []),
+  ];
 
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-brand-100 bg-white md:flex h-screen sticky top-0">
@@ -87,7 +90,7 @@ export default function Sidebar({ role }: { role: AppRole }) {
         {showSales     && <NavGroup title="Sales"      items={SALES_LINKS} />}
         {showMarketing && <NavGroup title="Marketing"  items={MARKETING_LINKS} />}
         {showFinance   && <NavGroup title="Finance"    items={FINANCE_LINKS} />}
-        {showMgmt      && <NavGroup title="Management" items={MGMT_LINKS} />}
+        {mgmtLinks.length > 0 && <NavGroup title="Management" items={mgmtLinks} />}
       </nav>
     </aside>
   );

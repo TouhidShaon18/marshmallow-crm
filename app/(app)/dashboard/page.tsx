@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, normaliseRole, isMarketingRole } from "@/lib/auth";
+import { getCurrentUser, normaliseRole, isMarketingRole, isOwnerRole, roleLabel } from "@/lib/auth";
 import AiBriefing, { AiBriefingSkeleton } from "@/components/ai-briefing";
 import { TargetCard, MarketingTargetCard } from "@/components/target-progress";
 import { getTargetProgress, getMarketingProgress } from "@/app/target-actions";
@@ -24,7 +24,7 @@ function StatCard({ label, value, href }: { label: string; value: number | strin
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) return null;
-  const isOwner = user.role === "OWNER";
+  const isOwner = isOwnerRole(user.role);
   const period = currentPeriod();
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000);
@@ -209,8 +209,8 @@ export default async function DashboardPage() {
                     <tr key={t.id}>
                       <td className="py-2">
                         {t.name}
-                        {t.role === "OWNER" && (
-                          <span className="badge ml-2 bg-brand-100 text-brand-700">owner</span>
+                        {(t.role === "OWNER" || t.role === "ADMIN") && (
+                          <span className="badge ml-2 bg-brand-100 text-brand-700">{roleLabel(normaliseRole(t.role))}</span>
                         )}
                       </td>
                       <td className="py-2 text-center text-brand-700/70">{t._count.customers}</td>

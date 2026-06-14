@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { createEmployee } from "@/app/actions";
 
-export default function EmployeeForm() {
+export default function EmployeeForm({ canManageAdmins = false }: { canManageAdmins?: boolean }) {
   const [state, action, pending] = useActionState(createEmployee, {});
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -27,13 +27,23 @@ export default function EmployeeForm() {
           <input name="password" required minLength={6} className="input" />
         </div>
         <div>
-          <label className="label">Department</label>
+          <label className="label">Role</label>
           <select name="role" className="input" defaultValue="SALES">
             <option value="SALES">🛍️ Sales — customers, follow-ups, pipeline</option>
-            <option value="MARKETING">📣 Marketing — broadcasts, campaigns, automations</option>
-            <option value="OWNER">👑 Admin / Owner — full access to everything</option>
+            <option value="MARKETING">📣 Marketing — broadcasts, campaigns, affiliates</option>
             <option value="FINANCE">💰 Finance — P&amp;L entries, financial dashboard</option>
+            {canManageAdmins && (
+              <>
+                <option value="ADMIN">🛡️ Admin — full access, except API keys &amp; integrations</option>
+                <option value="OWNER">👑 Super Admin — full access incl. API keys &amp; integrations</option>
+              </>
+            )}
           </select>
+          {canManageAdmins && (
+            <p className="mt-1 text-xs text-brand-700/50">
+              Admins can run everything but can&apos;t change integrations or API keys. Only a Super Admin can.
+            </p>
+          )}
         </div>
       </div>
 

@@ -9,7 +9,8 @@ datasource db {
 }
 
 enum Role {
-  OWNER
+  OWNER      // "Super Admin" — full access incl. API keys & integrations
+  ADMIN      // full operational access EXCEPT API keys & integrations (Settings)
   EMPLOYEE   // legacy — treated as SALES
   SALES
   MARKETING

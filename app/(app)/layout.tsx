@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentUser, roleLabel } from "@/lib/auth";
+import { getCurrentUser, roleLabel, isSuperAdminRole } from "@/lib/auth";
 import { logout } from "@/app/actions";
 import Sidebar from "@/components/sidebar";
 import MobileMenu from "@/components/mobile-menu";
@@ -23,7 +23,7 @@ export default async function AppLayout({
             <span className="text-sm font-semibold text-brand-900">🍡 Marshmallow CRM</span>
           </div>
           <div className="ml-auto flex items-center gap-3">
-            {user.role === "OWNER" && (
+            {isSuperAdminRole(user.role) && (
               <Link
                 href="/settings"
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-brand-600 hover:bg-brand-100"

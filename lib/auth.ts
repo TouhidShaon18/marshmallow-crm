@@ -9,7 +9,7 @@ const secret = new TextEncoder().encode(
   process.env.AUTH_SECRET ?? "dev-secret-change-me",
 );
 
-export type AppRole = "OWNER" | "SALES" | "MARKETING" | "EMPLOYEE" | "FINANCE";
+export type AppRole = "OWNER" | "ADMIN" | "SALES" | "MARKETING" | "EMPLOYEE" | "FINANCE";
 
 export type SessionUser = {
   id: string;
@@ -32,7 +32,19 @@ export function isMarketingRole(role: AppRole) {
   return role === "MARKETING";
 }
 
+/**
+ * "Elevated access" — Super Admin (OWNER) or Admin. Both see every section and
+ * manage business config. Use this for general full-access gates.
+ */
 export function isOwnerRole(role: AppRole) {
+  return role === "OWNER" || role === "ADMIN";
+}
+
+/**
+ * Strict Super-Admin check. ONLY the OWNER may touch API keys & integrations
+ * (Settings page, Nuport, GMB, WooCommerce). Admins are excluded.
+ */
+export function isSuperAdminRole(role: AppRole) {
   return role === "OWNER";
 }
 
@@ -42,9 +54,10 @@ export function isFinanceRole(role: AppRole) {
 
 /** Label shown in the UI for a role. */
 export function roleLabel(role: AppRole) {
-  if (role === "OWNER")    return "Owner";
+  if (role === "OWNER")     return "Super Admin";
+  if (role === "ADMIN")     return "Admin";
   if (role === "MARKETING") return "Marketing";
-  if (role === "FINANCE")  return "Finance";
+  if (role === "FINANCE")   return "Finance";
   return "Sales";
 }
 

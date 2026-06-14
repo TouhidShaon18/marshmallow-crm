@@ -34,10 +34,8 @@ const FINANCE_LINKS: NavItem[] = [
   { href: "/finance/goals",  label: "Goals",        icon: "🎯" },
 ];
 
-const MGMT_LINKS: NavItem[] = [
-  { href: "/team",     label: "Team",     icon: "🛠️" },
-  { href: "/settings", label: "Settings", icon: "⚙️" },
-];
+const TEAM_LINK: NavItem     = { href: "/team",     label: "Team",     icon: "🛠️" };
+const SETTINGS_LINK: NavItem = { href: "/settings", label: "Settings", icon: "⚙️" };
 
 type Section = { title: string; items: NavItem[] };
 
@@ -51,15 +49,19 @@ export default function MobileMenu({ role }: { role: AppRole }) {
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
+  const isAdmin = role === "OWNER" || role === "ADMIN"; // elevated access
+  const isSuper = role === "OWNER";                     // super admin only
+
   const sections: Section[] = [];
-  if (role === "OWNER" || role === "SALES" || role === "EMPLOYEE")
+  if (isAdmin || role === "SALES" || role === "EMPLOYEE")
     sections.push({ title: "Sales", items: SALES_LINKS });
-  if (role === "OWNER" || role === "MARKETING")
+  if (isAdmin || role === "MARKETING")
     sections.push({ title: "Marketing", items: MARKETING_LINKS });
-  if (role === "OWNER" || role === "FINANCE")
+  if (isAdmin || role === "FINANCE")
     sections.push({ title: "Finance", items: FINANCE_LINKS });
-  if (role === "OWNER")
-    sections.push({ title: "Management", items: MGMT_LINKS });
+  const mgmt = [...(isAdmin ? [TEAM_LINK] : []), ...(isSuper ? [SETTINGS_LINK] : [])];
+  if (mgmt.length > 0)
+    sections.push({ title: "Management", items: mgmt });
 
   return (
     <>
