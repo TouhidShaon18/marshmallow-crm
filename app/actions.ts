@@ -102,6 +102,20 @@ export async function deleteCustomer(id: string): Promise<void> {
   redirect("/customers");
 }
 
+// Bulk delete — restricted to admins/super admins (mass-destructive).
+export async function bulkDeleteCustomers(
+  ids: string[],
+): Promise<{ ok: boolean; deleted: number; error?: string }> {
+  const user = await requireUser();
+  if (!isOwnerRole(user.role)) return { ok: false, deleted: 0, error: "Not allowed." };
+  const clean = (ids ?? []).filter((id) => typeof id === "string" && id.length > 0);
+  if (clean.length === 0) return { ok: false, deleted: 0, error: "Nothing selected." };
+  const res = await prisma.customer.deleteMany({ where: { id: { in: clean } } });
+  revalidatePath("/customers");
+  revalidatePath("/followups");
+  return { ok: true, deleted: res.count };
+}
+
 // ---------- interactions (conversation log) ----------
 export async function addInteraction(formData: FormData): Promise<void> {
   const user = await requireUser();

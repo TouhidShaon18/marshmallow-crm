@@ -1,18 +1,15 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import TagBadge from "@/components/tag-badge";
-import { getRank } from "@/lib/loyalty";
-
-function daysSince(d: Date | null): number | null {
-  if (!d) return null;
-  return Math.floor((Date.now() - new Date(d).getTime()) / 86_400_000);
-}
+import { getCurrentUser, isOwnerRole } from "@/lib/auth";
+import CustomersTable from "@/components/customers-table";
 
 export default async function CustomersPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; tag?: string }>;
 }) {
+  const user = await getCurrentUser();
+  const canBulkDelete = !!user && isOwnerRole(user.role);
   const { q, tag } = await searchParams;
   const query = q?.trim();
 
@@ -100,73 +97,13 @@ export default async function CustomersPage({
         </p>
       )}
 
-      <div className="card overflow-hidden">
-        {customers.length === 0 ? (
-          <div className="p-10 text-center text-brand-700/60">
-            {query || tag ? "No customers match your filter." : "No customers yet. Add your first one!"}
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-brand-50 text-left text-xs uppercase tracking-wide text-brand-700/70">
-              <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Anime</th>
-                <th className="px-4 py-3">Product</th>
-                <th className="px-4 py-3 hidden sm:table-cell">Channel</th>
-                <th className="px-4 py-3 hidden md:table-cell">Assigned</th>
-                <th className="px-4 py-3">Last contact</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-brand-50">
-              {customers.map((c) => {
-                const since = daysSince(c.lastContactedAt);
-                const overdue = since == null || since >= 7;
-                return (
-                  <tr key={c.id} className="hover:bg-brand-50/50">
-                    <td className="px-4 py-3">
-                      <Link href={`/customers/${c.id}`} className="font-semibold text-brand-700 hover:underline">
-                        {c.name}
-                      </Link>
-                      {c.repeatCustomer && (
-                        <span className="badge ml-2 bg-amber-100 text-amber-700">repeat</span>
-                      )}
-                      {c.stampCount > 0 && (
-                        <span className="badge ml-2 bg-purple-100 text-purple-700">
-                          {getRank(c.stampCount).icon} {getRank(c.stampCount).name}
-                        </span>
-                      )}
-                      {c.tags.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {c.tags.map((t) => (
-                            <TagBadge key={t.id} name={t.name} color={t.color} />
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">{c.favouriteAnime ?? "—"}</td>
-                    <td className="px-4 py-3">{c.productBought ?? "—"}</td>
-                    <td className="px-4 py-3 hidden sm:table-cell">
-                      <span className={`badge ${c.channel === "ONLINE" ? "bg-sky-100 text-sky-700" : "bg-brand-100 text-brand-700"}`}>
-                        {c.channel === "ONLINE" ? "Online" : "Offline"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 hidden md:table-cell">{c.assignedTo?.name ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      {since == null ? (
-                        <span className="text-red-600">Never</span>
-                      ) : (
-                        <span className={overdue ? "text-red-600 font-medium" : "text-brand-700/70"}>
-                          {since === 0 ? "Today" : `${since}d ago`}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {customers.length === 0 ? (
+        <div className="card p-10 text-center text-brand-700/60">
+          {query || tag ? "No customers match your filter." : "No customers yet. Add your first one!"}
+        </div>
+      ) : (
+        <CustomersTable customers={customers} canBulkDelete={canBulkDelete} />
+      )}
     </div>
   );
 }
