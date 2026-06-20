@@ -51,3 +51,19 @@ export function scheduledDateFor(period: string, dayOfMonth: number): Date {
   const day = Math.min(dayOfMonth, lastDay);
   return new Date(y, m - 1, day, 9, 0, 0); // 9 AM
 }
+
+/**
+ * All scheduled dates a template produces in a period.
+ * DAILY → one per calendar day; MONTHLY → a single date on dayOfMonth.
+ */
+export function scheduledDatesFor(
+  period: string,
+  template: { frequency: string; dayOfMonth: number },
+): Date[] {
+  const [y, m] = period.split("-").map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  if (template.frequency === "DAILY") {
+    return Array.from({ length: lastDay }, (_, i) => new Date(y, m - 1, i + 1, 9, 0, 0));
+  }
+  return [scheduledDateFor(period, template.dayOfMonth)];
+}

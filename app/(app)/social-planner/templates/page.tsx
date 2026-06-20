@@ -69,7 +69,9 @@ export default async function TemplatesPage() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-brand-900">{t.topic}</p>
                   <p className="text-xs text-brand-700/50">
-                    Every month on the <strong>{t.dayOfMonth}{ordinal(t.dayOfMonth)}</strong>
+                    {t.frequency === "DAILY"
+                      ? <strong>Every day</strong>
+                      : <>Every month on the <strong>{t.dayOfMonth}{ordinal(t.dayOfMonth)}</strong></>}
                     {t.assignedTo && ` · ${t.assignedTo.name}`}
                   </p>
                   {t.notes && <p className="text-xs text-brand-700/40 italic">{t.notes}</p>}
@@ -108,7 +110,7 @@ export default async function TemplatesPage() {
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-brand-900">{t.topic}</p>
-                  <p className="text-xs text-brand-700/50">Day {t.dayOfMonth}{t.assignedTo && ` · ${t.assignedTo.name}`}</p>
+                  <p className="text-xs text-brand-700/50">{t.frequency === "DAILY" ? "Every day" : `Day ${t.dayOfMonth}`}{t.assignedTo && ` · ${t.assignedTo.name}`}</p>
                 </div>
                 <div className="flex gap-2 text-xs">
                   <form action={resume}>

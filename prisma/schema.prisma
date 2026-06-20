@@ -332,7 +332,8 @@ model SocialTemplate {
   channel      SocialChannel
   topic        String        // post idea / content theme
   notes        String?       // caption hints, hashtags, etc.
-  dayOfMonth   Int           // 1–31 (clamped to last day of month when generating)
+  frequency    String        @default("MONTHLY") // "MONTHLY" (one post on dayOfMonth) | "DAILY" (every day)
+  dayOfMonth   Int           // 1–31 (clamped to last day of month); ignored when frequency = DAILY
   assignedTo   User?         @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
   assignedToId String?
   active       Boolean       @default(true)

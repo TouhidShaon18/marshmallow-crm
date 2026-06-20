@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { createTemplate } from "@/app/social-actions";
 import { ALL_CHANNELS, CHANNEL_CONFIG } from "@/lib/social";
 
@@ -8,10 +8,11 @@ type Employee = { id: string; name: string };
 
 export default function CreateTemplateForm({ employees }: { employees: Employee[] }) {
   const [state, action, pending] = useActionState(createTemplate, undefined);
+  const [frequency, setFrequency] = useState<"MONTHLY" | "DAILY">("MONTHLY");
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (state?.ok) formRef.current?.reset();
+    if (state?.ok) { formRef.current?.reset(); setFrequency("MONTHLY"); }
   }, [state?.ok]);
 
   return (
@@ -32,17 +33,37 @@ export default function CreateTemplateForm({ employees }: { employees: Employee[
           </select>
         </div>
         <div>
-          <label className="label">Day of month (1–31) *</label>
-          <input
-            name="dayOfMonth"
-            type="number"
-            min="1"
-            max="31"
-            required
+          <label className="label">Frequency *</label>
+          <select
+            name="frequency"
             className="input"
-            placeholder="e.g. 5"
-          />
+            value={frequency}
+            onChange={(e) => setFrequency(e.target.value as "MONTHLY" | "DAILY")}
+          >
+            <option value="MONTHLY">Once a month (on a set day)</option>
+            <option value="DAILY">Every day</option>
+          </select>
         </div>
+        {frequency === "MONTHLY" ? (
+          <div>
+            <label className="label">Day of month (1–31) *</label>
+            <input
+              name="dayOfMonth"
+              type="number"
+              min="1"
+              max="31"
+              required
+              className="input"
+              placeholder="e.g. 5"
+            />
+          </div>
+        ) : (
+          <div className="flex items-end">
+            <p className="text-xs text-brand-700/50 pb-2">
+              A post will be planned for <strong>every day</strong> of the month.
+            </p>
+          </div>
+        )}
         <div className="sm:col-span-2">
           <label className="label">Topic / content idea *</label>
           <input name="topic" required className="input" placeholder="e.g. New arrival product showcase" />

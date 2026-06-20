@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, isOwnerRole } from "@/lib/auth";
-import { scheduledDateFor } from "@/lib/social";
+import { generatePostsForPeriod } from "@/lib/social-generate";
 
 /** Only the owner can manage the planner (create/delete templates, generate months, etc.) */
 async function requireOwner() {
@@ -29,12 +29,16 @@ export async function createTemplate(
 ): Promise<{ error?: string; ok?: boolean }> {
   await requireOwner();
 
-  const channel = formData.get("channel")?.toString();
-  const topic   = formData.get("topic")?.toString().trim();
-  const day     = parseInt(formData.get("dayOfMonth")?.toString() ?? "");
+  const channel   = formData.get("channel")?.toString();
+  const topic     = formData.get("topic")?.toString().trim();
+  const frequency = formData.get("frequency")?.toString() === "DAILY" ? "DAILY" : "MONTHLY";
+  const day       = parseInt(formData.get("dayOfMonth")?.toString() ?? "");
 
-  if (!channel || !topic || !day || day < 1 || day > 31) {
-    return { error: "Channel, topic, and a valid day (1–31) are required." };
+  if (!channel || !topic) {
+    return { error: "Channel and topic are required." };
+  }
+  if (frequency === "MONTHLY" && (!day || day < 1 || day > 31)) {
+    return { error: "Pick a valid day of the month (1–31), or choose “Every day”." };
   }
 
   await prisma.socialTemplate.create({
@@ -42,7 +46,8 @@ export async function createTemplate(
       channel:     channel as never,
       topic,
       notes:       formData.get("notes")?.toString().trim() || null,
-      dayOfMonth:  day,
+      frequency,
+      dayOfMonth:  frequency === "DAILY" ? 1 : day,
       assignedToId: formData.get("assignedToId")?.toString() || null,
     },
   });
@@ -67,40 +72,12 @@ export async function deleteTemplate(id: string): Promise<void> {
 
 // ── Monthly posts ─────────────────────────────────────────────────────────────
 
-/** Generate this month's posts from active templates. Skips templates already generated. */
+/** Generate this month's posts from active templates. Idempotent (per template/day). */
 export async function generateMonth(period: string): Promise<{ created: number }> {
   await requireOwner();
-
-  const templates = await prisma.socialTemplate.findMany({
-    where: { active: true },
-  });
-
-  // Find which templateIds already have posts in this period
-  const existing = await prisma.socialPost.findMany({
-    where: { period, templateId: { not: null } },
-    select: { templateId: true },
-  });
-  const existingTemplateIds = new Set(existing.map((p) => p.templateId));
-
-  const toCreate = templates.filter((t) => !existingTemplateIds.has(t.id));
-
-  if (toCreate.length === 0) return { created: 0 };
-
-  await prisma.socialPost.createMany({
-    data: toCreate.map((t) => ({
-      templateId:   t.id,
-      channel:      t.channel,
-      topic:        t.topic,
-      notes:        t.notes,
-      period,
-      scheduledDate: scheduledDateFor(period, t.dayOfMonth),
-      assignedToId: t.assignedToId,
-      status:       "PLANNED" as const,
-    })),
-  });
-
+  const created = await generatePostsForPeriod(period);
   revalidatePath("/social-planner");
-  return { created: toCreate.length };
+  return { created };
 }
 
 /** Add a one-off post (not from a template). */
