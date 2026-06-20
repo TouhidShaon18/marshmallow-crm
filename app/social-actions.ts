@@ -31,14 +31,25 @@ export async function createTemplate(
 
   const channel   = formData.get("channel")?.toString();
   const topic     = formData.get("topic")?.toString().trim();
-  const frequency = formData.get("frequency")?.toString() === "DAILY" ? "DAILY" : "MONTHLY";
+  const rawFreq   = formData.get("frequency")?.toString() ?? "MONTHLY";
+  const frequency = ["MONTHLY", "WEEKLY", "BIWEEKLY", "DAILY"].includes(rawFreq) ? rawFreq : "MONTHLY";
   const day       = parseInt(formData.get("dayOfMonth")?.toString() ?? "");
+  const dow       = parseInt(formData.get("dayOfWeek")?.toString() ?? "");
+
+  // Parse "HH:MM" time → hour/minute (default 9:00 AM).
+  const timeStr = formData.get("time")?.toString() ?? "";
+  const [hStr, mStr] = timeStr.split(":");
+  const postHour   = Math.min(23, Math.max(0, parseInt(hStr) || 9));
+  const postMinute = Math.min(59, Math.max(0, parseInt(mStr) || 0));
 
   if (!channel || !topic) {
     return { error: "Channel and topic are required." };
   }
   if (frequency === "MONTHLY" && (!day || day < 1 || day > 31)) {
-    return { error: "Pick a valid day of the month (1–31), or choose “Every day”." };
+    return { error: "Pick a valid day of the month (1–31)." };
+  }
+  if ((frequency === "WEEKLY" || frequency === "BIWEEKLY") && (isNaN(dow) || dow < 0 || dow > 6)) {
+    return { error: "Pick a day of the week." };
   }
 
   await prisma.socialTemplate.create({
@@ -47,7 +58,10 @@ export async function createTemplate(
       topic,
       notes:       formData.get("notes")?.toString().trim() || null,
       frequency,
-      dayOfMonth:  frequency === "DAILY" ? 1 : day,
+      dayOfMonth:  frequency === "MONTHLY" ? day : 1,
+      dayOfWeek:   frequency === "WEEKLY" || frequency === "BIWEEKLY" ? dow : null,
+      postHour,
+      postMinute,
       assignedToId: formData.get("assignedToId")?.toString() || null,
     },
   });

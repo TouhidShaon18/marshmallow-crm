@@ -332,8 +332,11 @@ model SocialTemplate {
   channel      SocialChannel
   topic        String        // post idea / content theme
   notes        String?       // caption hints, hashtags, etc.
-  frequency    String        @default("MONTHLY") // "MONTHLY" (one post on dayOfMonth) | "DAILY" (every day)
-  dayOfMonth   Int           // 1–31 (clamped to last day of month); ignored when frequency = DAILY
+  frequency    String        @default("MONTHLY") // MONTHLY | WEEKLY | BIWEEKLY | DAILY
+  dayOfMonth   Int           // 1–31 (clamped); used by MONTHLY
+  dayOfWeek    Int?          // 0=Sun … 6=Sat; used by WEEKLY / BIWEEKLY
+  postHour     Int           @default(9)  // 0–23, scheduled time hour
+  postMinute   Int           @default(0)  // 0–59
   assignedTo   User?         @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
   assignedToId String?
   active       Boolean       @default(true)
