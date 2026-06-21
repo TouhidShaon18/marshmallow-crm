@@ -4,10 +4,9 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser, isOwnerRole, isMarketingRole, isSalesRole } from "@/lib/auth";
 import {
   currentPeriod, periodToLabel, prevPeriod, nextPeriod,
-  CHANNEL_CONFIG, ALL_CHANNELS,
 } from "@/lib/social";
 import type { SocialChannelKey } from "@/lib/social";
-import SocialPostCard from "@/components/social-post-card";
+import ChannelTabs from "@/components/channel-tabs";
 import GenerateMonthButton from "@/components/generate-month-button";
 import AddSocialPostForm from "@/components/add-social-post-form";
 
@@ -67,14 +66,6 @@ export default async function SocialPlannerPage({
     const days = p.postedAt ? (now.getTime() - new Date(p.postedAt).getTime()) / 86_400_000 : null;
     return p.status === "POSTED" && days !== null && days >= 3;
   }).length;
-
-  // Group posts by channel
-  const byChannel = new Map<SocialChannelKey, typeof postsRaw>();
-  for (const p of postsRaw) {
-    const ch = p.channel as SocialChannelKey;
-    if (!byChannel.has(ch)) byChannel.set(ch, []);
-    byChannel.get(ch)!.push(p);
-  }
 
   // Default date for one-off form (first of the month)
   const [y, m] = period.split("-");
@@ -159,35 +150,16 @@ export default async function SocialPlannerPage({
         </p>
       )}
 
-      {/* Posts grouped by channel */}
+      {/* Posts — filter by channel */}
       {total > 0 && (
-        <div className="space-y-6">
-          {ALL_CHANNELS.filter((ch) => byChannel.has(ch)).map((ch) => {
-            const cfg = CHANNEL_CONFIG[ch];
-            const posts = byChannel.get(ch)!;
-            return (
-              <div key={ch}>
-                <h3 className={`mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${cfg.color}`}>
-                  {cfg.icon} {cfg.label}
-                  <span className="ml-1 text-xs opacity-60">({posts.length})</span>
-                </h3>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {posts.map((p) => (
-                    <SocialPostCard
-                      key={p.id}
-                      post={{
-                        ...p,
-                        channel: p.channel as SocialChannelKey,
-                        status: p.status as "PLANNED" | "POSTED" | "METRICS_LOGGED",
-                      }}
-                      canDelete={isManagerView}
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <ChannelTabs
+          posts={postsRaw.map((p) => ({
+            ...p,
+            channel: p.channel as SocialChannelKey,
+            status: p.status as "PLANNED" | "POSTED" | "METRICS_LOGGED",
+          }))}
+          canDelete={isManagerView}
+        />
       )}
 
       {/* Manager actions — generate + one-off post */}

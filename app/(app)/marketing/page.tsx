@@ -6,6 +6,7 @@ import { currentPeriod, periodToLabel, CHANNEL_CONFIG, ALL_CHANNELS } from "@/li
 import type { SocialChannelKey } from "@/lib/social";
 import { getMarketingProgress } from "@/app/target-actions";
 import { MarketingTargetCard } from "@/components/target-progress";
+import MarketingCharts from "@/components/marketing-charts";
 
 const LEAD_SOURCE_EMOJI: Record<string, string> = {
   Instagram: "📸",
@@ -263,6 +264,44 @@ export default async function MarketingPage() {
   const unknownCount = leadSources.find((r) => !r.leadSource)?._count._all ?? 0;
   const totalWithSource = knownLeadSources.reduce((s, r) => s + r._count._all, 0);
 
+  // ── Analytics chart data ────────────────────────────────────────────────────
+  const monthsBack = 6;
+  const trendStart = new Date(now.getFullYear(), now.getMonth() - (monthsBack - 1), 1);
+  const [leadsForTrend, postsByChannelRaw, spendRaw] = await Promise.all([
+    prisma.customer.findMany({ where: { createdAt: { gte: trendStart } }, select: { createdAt: true } }),
+    prisma.socialPost.groupBy({ by: ["channel"], where: { period: ownerPeriod }, _count: { _all: true } }),
+    prisma.campaign.groupBy({ by: ["channel"], _sum: { budget: true } }),
+  ]);
+
+  const trendBuckets: { key: string; label: string; value: number }[] = [];
+  for (let i = monthsBack - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    trendBuckets.push({
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      label: d.toLocaleDateString("en-GB", { month: "short" }) + " '" + String(d.getFullYear()).slice(2),
+      value: 0,
+    });
+  }
+  const bucketMap = new Map(trendBuckets.map((b) => [b.key, b]));
+  for (const c of leadsForTrend) {
+    const d = new Date(c.createdAt);
+    const b = bucketMap.get(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    if (b) b.value++;
+  }
+  const newLeadsChart = trendBuckets.map((b) => ({ label: b.label, value: b.value }));
+
+  const postsByChannelChart = ALL_CHANNELS
+    .map((ch) => ({ label: CHANNEL_CONFIG[ch].label, value: postsByChannelRaw.find((r) => r.channel === ch)?._count._all ?? 0 }))
+    .filter((d) => d.value > 0);
+
+  const leadsBySourceChart = knownLeadSources.map((r) => ({ label: r.leadSource!, value: r._count._all }));
+
+  const spendByChannelChart = spendRaw
+    .map((r) => ({ label: r.channel, value: r._sum.budget ?? 0 }))
+    .filter((d) => d.value > 0)
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 8);
+
   return (
     <div className="space-y-8">
       <div>
@@ -291,6 +330,15 @@ export default async function MarketingPage() {
           <p className="mt-1 text-sm text-brand-700/70">Active campaigns</p>
         </div>
       </div>
+
+      {/* Analytics charts */}
+      <MarketingCharts
+        newLeads={newLeadsChart}
+        postsByChannel={postsByChannelChart}
+        leadsBySource={leadsBySourceChart}
+        spendByChannel={spendByChannelChart}
+        monthLabel={ownerPeriodLabel}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Lead sources */}
