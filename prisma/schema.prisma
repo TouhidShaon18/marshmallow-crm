@@ -610,3 +610,11 @@ model AffiliatePayout {
 
   @@index([affiliateId])
 }
+
+// Maps a social channel to the employee who owns it (bulk assignment).
+model ChannelAssignment {
+  id           String   @id @default(cuid())
+  channel      String   @unique // SocialChannel value, e.g. "INSTAGRAM"
+  assignedToId String?
+  updatedAt    DateTime @updatedAt
+}

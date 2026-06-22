@@ -5,6 +5,7 @@ import { deleteTemplate, toggleTemplate } from "@/app/social-actions";
 import { CHANNEL_CONFIG, describeSchedule } from "@/lib/social";
 import type { SocialChannelKey } from "@/lib/social";
 import CreateTemplateForm from "@/components/create-template-form";
+import ChannelAssignForm from "@/components/channel-assign-form";
 import DeleteButton from "@/components/delete-button";
 import Link from "next/link";
 
@@ -13,7 +14,7 @@ export default async function TemplatesPage() {
   if (!user) redirect("/login");
   if (!isOwnerRole(user.role)) redirect("/social-planner");
 
-  const [templates, employees] = await Promise.all([
+  const [templates, employees, channelAssignments] = await Promise.all([
     prisma.socialTemplate.findMany({
       orderBy: [{ channel: "asc" }, { dayOfMonth: "asc" }],
       include: { assignedTo: { select: { id: true, name: true } } },
@@ -23,7 +24,11 @@ export default async function TemplatesPage() {
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    prisma.channelAssignment.findMany(),
   ]);
+
+  const currentAssignments: Record<string, string | null> = {};
+  for (const a of channelAssignments) currentAssignments[a.channel] = a.assignedToId;
 
   const active   = templates.filter((t) => t.active);
   const inactive = templates.filter((t) => !t.active);
@@ -49,6 +54,21 @@ export default async function TemplatesPage() {
           Add recurring post
         </h2>
         <CreateTemplateForm employees={employees} />
+      </div>
+
+      {/* Channel ownership */}
+      <div className="card p-6">
+        <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-brand-700/70">
+          Channel ownership
+        </h2>
+        <p className="mb-4 text-xs text-brand-700/50">
+          Assign each channel to an employee — they&apos;ll own all that channel&apos;s posts.
+        </p>
+        {employees.length === 0 ? (
+          <p className="text-sm text-brand-700/50">Add marketing team members first to assign channels.</p>
+        ) : (
+          <ChannelAssignForm employees={employees} current={currentAssignments} />
+        )}
       </div>
 
       {/* Active templates */}

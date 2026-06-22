@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, isOwnerRole } from "@/lib/auth";
 import { generatePostsForPeriod } from "@/lib/social-generate";
+import { ALL_CHANNELS } from "@/lib/social";
 
 /** Only the owner can manage the planner (create/delete templates, generate months, etc.) */
 async function requireOwner() {
@@ -19,6 +20,33 @@ async function requireAuth() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   return user;
+}
+
+// ── Channel ownership ──────────────────────────────────────────────────────────
+
+/**
+ * Assign each channel to an employee. Saves the mapping and bulk-applies it to
+ * every template + planned post on that channel (posted/logged ones are left).
+ */
+export async function saveChannelAssignments(
+  _prev: { ok?: boolean } | undefined,
+  formData: FormData,
+): Promise<{ ok?: boolean }> {
+  await requireOwner();
+  for (const ch of ALL_CHANNELS) {
+    const raw = formData.get(`assign_${ch}`)?.toString() || "";
+    const assignedToId = raw || null;
+    await prisma.channelAssignment.upsert({
+      where:  { channel: ch },
+      create: { channel: ch, assignedToId },
+      update: { assignedToId },
+    });
+    await prisma.socialTemplate.updateMany({ where: { channel: ch }, data: { assignedToId } });
+    await prisma.socialPost.updateMany({ where: { channel: ch, status: "PLANNED" }, data: { assignedToId } });
+  }
+  revalidatePath("/social-planner");
+  revalidatePath("/social-planner/templates");
+  return { ok: true };
 }
 
 // ── Templates ────────────────────────────────────────────────────────────────
@@ -52,6 +80,13 @@ export async function createTemplate(
     return { error: "Pick a day of the week." };
   }
 
+  // Explicit assignee, else fall back to the channel's owner (if set).
+  let assignedToId = formData.get("assignedToId")?.toString() || null;
+  if (!assignedToId) {
+    const owner = await prisma.channelAssignment.findUnique({ where: { channel } });
+    assignedToId = owner?.assignedToId ?? null;
+  }
+
   await prisma.socialTemplate.create({
     data: {
       channel:     channel as never,
@@ -62,7 +97,7 @@ export async function createTemplate(
       dayOfWeek:   frequency === "WEEKLY" || frequency === "BIWEEKLY" ? dow : null,
       postHour,
       postMinute,
-      assignedToId: formData.get("assignedToId")?.toString() || null,
+      assignedToId,
     },
   });
 
