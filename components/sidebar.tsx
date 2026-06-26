@@ -67,13 +67,14 @@ function NavGroup({ title, items }: { title: string; items: NavItem[] }) {
 }
 
 export default function Sidebar({ role }: { role: AppRole }) {
-  const isAdmin = role === "OWNER" || role === "ADMIN"; // elevated access
-  const isSuper = role === "OWNER";                     // super admin only
-  const showSales      = isAdmin || role === "SALES" || role === "EMPLOYEE";
-  const showMarketing  = isAdmin || role === "MARKETING";
+  const isManager = role === "OWNER" || role === "ADMIN" || role === "MANAGER"; // sales+marketing+team
+  const isAdmin   = role === "OWNER" || role === "ADMIN";                       // + finance
+  const isSuper   = role === "OWNER";                                           // + settings
+  const showSales      = isManager || role === "SALES" || role === "EMPLOYEE";
+  const showMarketing  = isManager || role === "MARKETING";
   const showFinance    = isAdmin || role === "FINANCE";
   const mgmtLinks = [
-    ...(isAdmin ? [TEAM_LINK] : []),
+    ...(isManager ? [TEAM_LINK] : []),
     ...(isSuper ? [SETTINGS_LINK] : []),
   ];
 

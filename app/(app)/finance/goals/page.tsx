@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, isOwnerRole, normaliseRole } from "@/lib/auth";
+import { getCurrentUser, isAdminRole, normaliseRole } from "@/lib/auth";
 import FinanceGoalsForm from "@/components/finance-goals-form";
 import PeriodPicker from "@/components/period-picker";
 
@@ -18,7 +18,7 @@ export default async function FinanceGoalsPage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (!isOwnerRole(normaliseRole(user.role))) redirect("/finance");
+  if (!isAdminRole(normaliseRole(user.role))) redirect("/finance");
 
   const params = await searchParams;
   const nowPeriod = new Date().toISOString().slice(0, 7);

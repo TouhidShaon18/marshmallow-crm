@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, isOwnerRole, isFinanceRole, normaliseRole } from "@/lib/auth";
+import { getCurrentUser, isAdminRole, canAccessFinance, normaliseRole } from "@/lib/auth";
 import {
   calcFinance,
   formatPeriodShort,
@@ -78,7 +78,7 @@ export default async function FinanceDashboardPage({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const role = normaliseRole(user.role);
-  if (!isOwnerRole(role) && !isFinanceRole(role)) redirect("/dashboard");
+  if (!canAccessFinance(role)) redirect("/dashboard");
 
   const params = await searchParams;
   const view: FinancePeriodType = (["DAILY", "WEEKLY", "MONTHLY"].includes(params.view ?? "")
@@ -136,7 +136,7 @@ export default async function FinanceDashboardPage({
         </div>
         <div className="flex gap-2">
           <Link href={`/finance/entry?type=${view}`} className="btn-secondary text-sm">+ Add Entry</Link>
-          {isOwnerRole(role) && (
+          {isAdminRole(role) && (
             <Link href="/finance/goals" className="btn-primary text-sm">Set Goals</Link>
           )}
         </div>

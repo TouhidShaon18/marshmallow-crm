@@ -3,21 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, isOwnerRole, isFinanceRole, normaliseRole } from "@/lib/auth";
+import { getCurrentUser, isAdminRole, canAccessFinance, normaliseRole } from "@/lib/auth";
 import { isValidPeriod, type FinancePeriodType } from "@/lib/finance";
 
 async function requireFinance() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const role = normaliseRole(user.role);
-  if (!isOwnerRole(role) && !isFinanceRole(role)) redirect("/dashboard");
+  if (!canAccessFinance(role)) redirect("/dashboard");
   return user;
 }
 
 async function requireOwner() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (!isOwnerRole(normaliseRole(user.role))) redirect("/finance");
+  if (!isAdminRole(normaliseRole(user.role))) redirect("/finance");
   return user;
 }
 

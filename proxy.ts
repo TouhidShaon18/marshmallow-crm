@@ -81,6 +81,13 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(new URL("/dashboard", request.url));
       }
     }
+
+    if (role === "MANAGER") {
+      // Sales & Marketing Manager: full Sales + Marketing, but no Finance or Settings.
+      if (matchesAny(pathname, FINANCE_ONLY) || matchesAny(pathname, ["/settings"])) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+    }
   } catch {
     // Expired / invalid JWT — let the page-level auth handle it
   }

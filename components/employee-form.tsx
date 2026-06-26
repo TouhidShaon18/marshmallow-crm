@@ -3,13 +3,25 @@
 import { useActionState, useEffect, useRef } from "react";
 import { createEmployee } from "@/app/actions";
 
-export default function EmployeeForm({ canManageAdmins = false }: { canManageAdmins?: boolean }) {
+const ROLE_OPTIONS: { value: string; label: string }[] = [
+  { value: "SALES",     label: "🛍️ Sales — customers, follow-ups, pipeline" },
+  { value: "MARKETING", label: "📣 Marketing — broadcasts, campaigns, affiliates" },
+  { value: "FINANCE",   label: "💰 Finance — P&L entries, financial dashboard" },
+  { value: "MANAGER",   label: "🧭 Sales & Marketing Manager — all Sales + Marketing" },
+  { value: "ADMIN",     label: "🛡️ Admin — full access, except API keys & integrations" },
+  { value: "OWNER",     label: "👑 Super Admin — full access incl. API keys & integrations" },
+];
+
+export default function EmployeeForm({ allowedRoles }: { allowedRoles: string[] }) {
   const [state, action, pending] = useActionState(createEmployee, {});
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (state?.ok) formRef.current?.reset();
   }, [state?.ok]);
+
+  const options = ROLE_OPTIONS.filter((o) => allowedRoles.includes(o.value));
+  const showsElevated = allowedRoles.some((r) => ["MANAGER", "ADMIN", "OWNER"].includes(r));
 
   return (
     <form ref={formRef} action={action} className="space-y-3">
@@ -29,19 +41,13 @@ export default function EmployeeForm({ canManageAdmins = false }: { canManageAdm
         <div>
           <label className="label">Role</label>
           <select name="role" className="input" defaultValue="SALES">
-            <option value="SALES">🛍️ Sales — customers, follow-ups, pipeline</option>
-            <option value="MARKETING">📣 Marketing — broadcasts, campaigns, affiliates</option>
-            <option value="FINANCE">💰 Finance — P&amp;L entries, financial dashboard</option>
-            {canManageAdmins && (
-              <>
-                <option value="ADMIN">🛡️ Admin — full access, except API keys &amp; integrations</option>
-                <option value="OWNER">👑 Super Admin — full access incl. API keys &amp; integrations</option>
-              </>
-            )}
+            {options.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
           </select>
-          {canManageAdmins && (
+          {showsElevated && (
             <p className="mt-1 text-xs text-brand-700/50">
-              Admins can run everything but can&apos;t change integrations or API keys. Only a Super Admin can.
+              A Manager runs all Sales &amp; Marketing (and their people) but not Finance or integrations.
             </p>
           )}
         </div>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, roleLabel, normaliseRole, isMarketingRole, isOwnerRole, isSuperAdminRole } from "@/lib/auth";
+import { getCurrentUser, roleLabel, normaliseRole, isMarketingRole, isOwnerRole, isSuperAdminRole, assignableRoles } from "@/lib/auth";
 import { deleteEmployee } from "@/app/actions";
 import { getTargetProgress, getMarketingProgress } from "@/app/target-actions";
 import EmployeeForm from "@/components/employee-form";
@@ -18,7 +18,8 @@ export default async function TeamPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (!isOwnerRole(user.role)) redirect("/dashboard");
-  const canManageAdmins = isSuperAdminRole(user.role);
+  const canSeeSettings = isSuperAdminRole(user.role);
+  const allowedRoles = assignableRoles(normaliseRole(user.role));
 
   const period = currentPeriod();
 
@@ -61,7 +62,7 @@ export default async function TeamPage() {
           <h1 className="text-2xl font-bold text-brand-900">Team</h1>
           <p className="text-sm text-brand-700/70">Manage employees and set monthly targets.</p>
         </div>
-        {canManageAdmins && (
+        {canSeeSettings && (
           <Link href="/settings" className="btn-secondary text-sm whitespace-nowrap">
             ⚙️ Settings
           </Link>
@@ -73,7 +74,7 @@ export default async function TeamPage() {
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-700/70">
           Add a team member
         </h2>
-        <EmployeeForm canManageAdmins={canManageAdmins} />
+        <EmployeeForm allowedRoles={allowedRoles} />
       </div>
 
       {/* Team list */}
@@ -102,6 +103,8 @@ export default async function TeamPage() {
                           ? "bg-amber-100 text-amber-700"
                           : m.role === "ADMIN"
                           ? "bg-brand-100 text-brand-700"
+                          : m.role === "MANAGER"
+                          ? "bg-indigo-100 text-indigo-700"
                           : m.role === "MARKETING"
                           ? "bg-pink-100 text-pink-700"
                           : m.role === "FINANCE"

@@ -209,7 +209,7 @@ export default async function DashboardPage() {
                     <tr key={t.id}>
                       <td className="py-2">
                         {t.name}
-                        {(t.role === "OWNER" || t.role === "ADMIN") && (
+                        {(t.role === "OWNER" || t.role === "ADMIN" || t.role === "MANAGER") && (
                           <span className="badge ml-2 bg-brand-100 text-brand-700">{roleLabel(normaliseRole(t.role))}</span>
                         )}
                       </td>

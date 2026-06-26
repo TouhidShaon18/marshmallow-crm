@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, isOwnerRole, isFinanceRole, normaliseRole } from "@/lib/auth";
+import { getCurrentUser, canAccessFinance, normaliseRole } from "@/lib/auth";
 import FinanceEntryForm from "@/components/finance-entry-form";
 import FinancePeriodSelector from "@/components/finance-period-selector";
 import { defaultPeriod, formatPeriodLong, isValidPeriod, type FinancePeriodType } from "@/lib/finance";
@@ -14,7 +14,7 @@ export default async function FinanceEntryPage({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const role = normaliseRole(user.role);
-  if (!isOwnerRole(role) && !isFinanceRole(role)) redirect("/dashboard");
+  if (!canAccessFinance(role)) redirect("/dashboard");
 
   const params = await searchParams;
   const periodType: FinancePeriodType = (["DAILY", "WEEKLY", "MONTHLY"].includes(params.type ?? "")

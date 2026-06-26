@@ -10,7 +10,10 @@ import {
   hashPassword,
   verifyPassword,
   isOwnerRole,
-  isSuperAdminRole,
+  assignableRoles,
+  normaliseRole,
+  roleLabel,
+  type AppRole,
 } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
 import { parseCustomerFile } from "@/lib/import";
@@ -249,23 +252,19 @@ export async function createEmployee(
   formData: FormData,
 ): Promise<{ error?: string; ok?: boolean }> {
   const user = await requireUser();
-  if (!isOwnerRole(user.role)) return { error: "Only admins can add team members." };
+  if (!isOwnerRole(user.role)) return { error: "Only managers and admins can add team members." };
 
   const name = str(formData, "name");
   const email = str(formData, "email")?.toLowerCase();
   const password = str(formData, "password");
-  const rawRole = str(formData, "role") ?? "SALES";
+  const rawRole = (str(formData, "role") ?? "SALES") as AppRole;
 
-  // Only a Super Admin may create elevated roles (Super Admin / Admin).
-  const elevated = rawRole === "OWNER" || rawRole === "ADMIN";
-  if (elevated && !isSuperAdminRole(user.role)) {
-    return { error: "Only a Super Admin can create Super Admin or Admin accounts." };
+  // You can only create roles you're allowed to assign.
+  const allowed = assignableRoles(normaliseRole(user.role));
+  if (!allowed.includes(rawRole)) {
+    return { error: `You're not allowed to create a "${roleLabel(rawRole)}" account.` };
   }
-  const allowed = isSuperAdminRole(user.role)
-    ? ["SALES", "MARKETING", "FINANCE", "ADMIN", "OWNER"]
-    : ["SALES", "MARKETING", "FINANCE"];
-  const role = (allowed.includes(rawRole) ? rawRole : "SALES") as
-    "SALES" | "MARKETING" | "FINANCE" | "ADMIN" | "OWNER";
+  const role = rawRole;
 
   if (!name || !email || !password) {
     return { error: "Name, email and password are required." };
@@ -285,9 +284,9 @@ export async function deleteEmployee(id: string): Promise<void> {
   if (!isOwnerRole(user.role)) return;
   if (user.id === id) return; // can't delete yourself
 
-  // Only a Super Admin may remove another Super Admin or Admin.
+  // You can only remove people whose role you're allowed to assign.
   const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
-  if (target && (target.role === "OWNER" || target.role === "ADMIN") && !isSuperAdminRole(user.role)) return;
+  if (target && !assignableRoles(normaliseRole(user.role)).includes(normaliseRole(target.role))) return;
   // Unassign their customers, keep history intact.
   await prisma.customer.updateMany({
     where: { assignedToId: id },

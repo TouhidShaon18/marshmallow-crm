@@ -9,7 +9,7 @@ const secret = new TextEncoder().encode(
   process.env.AUTH_SECRET ?? "dev-secret-change-me",
 );
 
-export type AppRole = "OWNER" | "ADMIN" | "SALES" | "MARKETING" | "EMPLOYEE" | "FINANCE";
+export type AppRole = "OWNER" | "ADMIN" | "MANAGER" | "SALES" | "MARKETING" | "EMPLOYEE" | "FINANCE";
 
 export type SessionUser = {
   id: string;
@@ -33,11 +33,28 @@ export function isMarketingRole(role: AppRole) {
 }
 
 /**
- * "Elevated access" — Super Admin (OWNER) or Admin. Both see every section and
- * manage business config. Use this for general full-access gates.
+ * "Elevated Sales+Marketing access" — Super Admin (OWNER), Admin, or the
+ * Sales & Marketing Manager. These see all Sales + Marketing sections and the
+ * team. Most full-access gates use this. (Finance is gated separately so the
+ * Manager is excluded — see canAccessFinance / isAdminRole.)
  */
 export function isOwnerRole(role: AppRole) {
+  return role === "OWNER" || role === "ADMIN" || role === "MANAGER";
+}
+
+/** OWNER or ADMIN only (excludes the Manager). For finance config & admin gates. */
+export function isAdminRole(role: AppRole) {
   return role === "OWNER" || role === "ADMIN";
+}
+
+/** Who may view/enter the Finance module — owner, admin, or finance staff. */
+export function canAccessFinance(role: AppRole) {
+  return role === "OWNER" || role === "ADMIN" || role === "FINANCE";
+}
+
+/** Sales & Marketing Manager — full Sales + Marketing, no Finance/Settings. */
+export function isManagerRole(role: AppRole) {
+  return role === "MANAGER";
 }
 
 /**
@@ -52,10 +69,19 @@ export function isFinanceRole(role: AppRole) {
   return role === "FINANCE";
 }
 
+/** Roles a user with `actor` role is allowed to create/remove. */
+export function assignableRoles(actor: AppRole): AppRole[] {
+  if (actor === "OWNER")   return ["SALES", "MARKETING", "FINANCE", "MANAGER", "ADMIN", "OWNER"];
+  if (actor === "ADMIN")   return ["SALES", "MARKETING", "FINANCE", "MANAGER"];
+  if (actor === "MANAGER") return ["SALES", "MARKETING"];
+  return [];
+}
+
 /** Label shown in the UI for a role. */
 export function roleLabel(role: AppRole) {
   if (role === "OWNER")     return "Super Admin";
   if (role === "ADMIN")     return "Admin";
+  if (role === "MANAGER")   return "Sales & Marketing Manager";
   if (role === "MARKETING") return "Marketing";
   if (role === "FINANCE")   return "Finance";
   return "Sales";
