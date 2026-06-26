@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentUser, isOwnerRole, isMarketingRole, normaliseRole } from "@/lib/auth";
+import { getCurrentUser, canAccessMarketing } from "@/lib/auth";
 import AffiliateForm from "@/components/affiliate-form";
 
 export default async function NewAffiliatePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const role = normaliseRole(user.role);
-  if (!isOwnerRole(role) && !isMarketingRole(role)) redirect("/dashboard");
+  if (!canAccessMarketing(user.role, user.departments)) redirect("/dashboard");
 
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6">

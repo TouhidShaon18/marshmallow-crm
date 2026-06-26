@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { AppRole } from "@/lib/auth";
+
+export type Caps = { sales: boolean; marketing: boolean; finance: boolean; team: boolean; settings: boolean };
 
 type NavItem = { href: string; label: string; icon: string; exact?: boolean };
 
@@ -66,16 +67,13 @@ function NavGroup({ title, items }: { title: string; items: NavItem[] }) {
   );
 }
 
-export default function Sidebar({ role }: { role: AppRole }) {
-  const isManager = role === "OWNER" || role === "ADMIN" || role === "MANAGER"; // sales+marketing+team
-  const isAdmin   = role === "OWNER" || role === "ADMIN";                       // + finance
-  const isSuper   = role === "OWNER";                                           // + settings
-  const showSales      = isManager || role === "SALES" || role === "EMPLOYEE";
-  const showMarketing  = isManager || role === "MARKETING";
-  const showFinance    = isAdmin || role === "FINANCE";
+export default function Sidebar({ caps }: { caps: Caps }) {
+  const showSales      = caps.sales;
+  const showMarketing  = caps.marketing;
+  const showFinance    = caps.finance;
   const mgmtLinks = [
-    ...(isManager ? [TEAM_LINK] : []),
-    ...(isSuper ? [SETTINGS_LINK] : []),
+    ...(caps.team ? [TEAM_LINK] : []),
+    ...(caps.settings ? [SETTINGS_LINK] : []),
   ];
 
   return (

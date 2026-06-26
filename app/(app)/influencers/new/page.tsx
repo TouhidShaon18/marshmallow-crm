@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getCurrentUser, isOwnerRole, isMarketingRole, normaliseRole } from "@/lib/auth";
+import { getCurrentUser, canAccessMarketing } from "@/lib/auth";
 import CreateInfluencerForm from "@/components/create-influencer-form";
 
 export default async function NewInfluencerPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const role = normaliseRole(user.role);
-  if (!isOwnerRole(role) && !isMarketingRole(role)) redirect("/dashboard");
+  if (!canAccessMarketing(user.role, user.departments)) redirect("/dashboard");
 
   return (
     <div className="mx-auto max-w-xl space-y-6">

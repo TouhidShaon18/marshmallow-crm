@@ -11,11 +11,14 @@ const secret = new TextEncoder().encode(
 
 export type AppRole = "OWNER" | "ADMIN" | "MANAGER" | "SALES" | "MARKETING" | "EMPLOYEE" | "FINANCE";
 
+export type Department = "SALES" | "MARKETING" | "FINANCE";
+
 export type SessionUser = {
   id: string;
   name: string;
   email: string;
   role: AppRole;
+  departments: string[]; // department sections this user can access
 };
 
 /** EMPLOYEE is the legacy name for SALES — normalise everywhere. */
@@ -47,9 +50,35 @@ export function isAdminRole(role: AppRole) {
   return role === "OWNER" || role === "ADMIN";
 }
 
-/** Who may view/enter the Finance module — owner, admin, or finance staff. */
-export function canAccessFinance(role: AppRole) {
-  return role === "OWNER" || role === "ADMIN" || role === "FINANCE";
+/** Department sections implied by an elevated/single-department role. */
+export function deptsForRole(role: AppRole): Department[] {
+  if (role === "OWNER" || role === "ADMIN") return ["SALES", "MARKETING", "FINANCE"];
+  if (role === "MANAGER")   return ["SALES", "MARKETING"];
+  if (role === "MARKETING") return ["MARKETING"];
+  if (role === "FINANCE")   return ["FINANCE"];
+  return ["SALES"]; // SALES / EMPLOYEE
+}
+
+/**
+ * The department sections a user can actually access. Elevated roles
+ * (Owner/Admin/Manager) are driven by their role; everyone else uses their
+ * stored `departments` (falling back to the role's implied set).
+ */
+export function effectiveDepartments(role: AppRole, departments?: string[] | null): string[] {
+  if (role === "OWNER" || role === "ADMIN" || role === "MANAGER") return deptsForRole(role);
+  return departments && departments.length > 0 ? departments : deptsForRole(role);
+}
+
+export function canAccessSales(role: AppRole, departments?: string[] | null) {
+  return effectiveDepartments(role, departments).includes("SALES");
+}
+export function canAccessMarketing(role: AppRole, departments?: string[] | null) {
+  return effectiveDepartments(role, departments).includes("MARKETING");
+}
+/** Finance access — owner/admin always; otherwise needs the FINANCE department. */
+export function canAccessFinance(role: AppRole, departments?: string[] | null) {
+  if (role === "OWNER" || role === "ADMIN") return true;
+  return effectiveDepartments(role, departments).includes("FINANCE");
 }
 
 /** Sales & Marketing Manager — full Sales + Marketing, no Finance/Settings. */
@@ -77,6 +106,18 @@ export function assignableRoles(actor: AppRole): AppRole[] {
   return [];
 }
 
+/** Department areas an actor may grant to staff. */
+export function assignableDepartments(actor: AppRole): Department[] {
+  if (actor === "OWNER" || actor === "ADMIN") return ["SALES", "MARKETING", "FINANCE"];
+  if (actor === "MANAGER") return ["SALES", "MARKETING"];
+  return [];
+}
+
+/** Elevated management tiers a creator may assign (Manager/Admin/Super Admin). */
+export function assignableTiers(actor: AppRole): AppRole[] {
+  return assignableRoles(actor).filter((r) => r === "MANAGER" || r === "ADMIN" || r === "OWNER");
+}
+
 /** Label shown in the UI for a role. */
 export function roleLabel(role: AppRole) {
   if (role === "OWNER")     return "Super Admin";
@@ -100,10 +141,11 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
 export async function createSession(
   userId: string,
   role: string,
+  departments: string[] = [],
   rememberMe = true,
 ): Promise<void> {
   const expiry = rememberMe ? "30d" : "1d";
-  const token = await new SignJWT({ uid: userId, role: normaliseRole(role) })
+  const token = await new SignJWT({ uid: userId, role: normaliseRole(role), departments })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(expiry)
@@ -139,6 +181,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       name: user.name,
       email: user.email,
       role: normaliseRole(user.role),
+      departments: user.departments ?? [],
     };
   } catch {
     return null;

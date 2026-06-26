@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, isOwnerRole, isMarketingRole, normaliseRole } from "@/lib/auth";
+import { getCurrentUser, isOwnerRole, canAccessMarketing, normaliseRole } from "@/lib/auth";
 import { deleteAffiliate, deleteSale, recordPayout, saveOverrides } from "@/app/affiliate-actions";
 import DeleteButton from "@/components/delete-button";
 import AffiliateForm from "@/components/affiliate-form";
@@ -21,7 +21,7 @@ export default async function AffiliateDetailPage({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const role = normaliseRole(user.role);
-  if (!isOwnerRole(role) && !isMarketingRole(role)) redirect("/dashboard");
+  if (!canAccessMarketing(user.role, user.departments)) redirect("/dashboard");
   const isOwner = isOwnerRole(role);
 
   const { id } = await params;

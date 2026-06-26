@@ -39,6 +39,18 @@ function matchesAny(pathname: string, prefixes: string[]) {
   );
 }
 
+// The department sections a user can reach (mirrors lib/auth.effectiveDepartments,
+// inlined here so proxy stays lightweight). Falls back to role when the JWT
+// predates the departments field.
+function effectiveDepts(role: string, departments: string[] | null): string[] {
+  if (role === "OWNER" || role === "ADMIN") return ["SALES", "MARKETING", "FINANCE"];
+  if (role === "MANAGER") return ["SALES", "MARKETING"];
+  if (departments && departments.length > 0) return departments;
+  if (role === "MARKETING") return ["MARKETING"];
+  if (role === "FINANCE") return ["FINANCE"];
+  return ["SALES"]; // SALES / EMPLOYEE
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(COOKIE_NAME)?.value;
@@ -47,47 +59,22 @@ export async function proxy(request: NextRequest) {
   try {
     const { payload } = await jwtVerify(token, secret);
     const role = (payload.role as string) ?? "SALES";
+    const departments = Array.isArray(payload.departments) ? (payload.departments as string[]) : null;
 
-    if (role === "MARKETING") {
-      // Marketing can't see Sales-only routes → redirect to their home
-      if (matchesAny(pathname, SALES_ONLY)) {
-        return NextResponse.redirect(new URL("/marketing", request.url));
-      }
-    }
+    const depts = effectiveDepts(role, departments);
+    const canSales     = depts.includes("SALES");
+    const canMarketing = depts.includes("MARKETING");
+    const canFinance   = depts.includes("FINANCE");
+    const canSettings  = role === "OWNER";
 
-    if (role === "SALES" || role === "EMPLOYEE") {
-      // Sales can't see Marketing-only or Finance-only routes
-      if (matchesAny(pathname, MARKETING_ONLY) || matchesAny(pathname, FINANCE_ONLY)) {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-    }
+    // Where to send someone who lacks access to the requested area.
+    const home = canSales ? "/dashboard" : canMarketing ? "/marketing" : canFinance ? "/finance" : "/dashboard";
+    const bounce = () => NextResponse.redirect(new URL(home, request.url));
 
-    if (role === "MARKETING") {
-      if (matchesAny(pathname, FINANCE_ONLY)) {
-        return NextResponse.redirect(new URL("/marketing", request.url));
-      }
-    }
-
-    if (role === "FINANCE") {
-      // Finance can only see Finance routes — redirect Sales/Marketing routes
-      if (matchesAny(pathname, SALES_ONLY) || matchesAny(pathname, MARKETING_ONLY)) {
-        return NextResponse.redirect(new URL("/finance", request.url));
-      }
-    }
-
-    if (role === "ADMIN") {
-      // Admins have full access EXCEPT API keys & integrations (Settings).
-      if (matchesAny(pathname, ["/settings"])) {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-    }
-
-    if (role === "MANAGER") {
-      // Sales & Marketing Manager: full Sales + Marketing, but no Finance or Settings.
-      if (matchesAny(pathname, FINANCE_ONLY) || matchesAny(pathname, ["/settings"])) {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-    }
+    if (matchesAny(pathname, SALES_ONLY)     && !canSales)     return bounce();
+    if (matchesAny(pathname, MARKETING_ONLY) && !canMarketing) return bounce();
+    if (matchesAny(pathname, FINANCE_ONLY)   && !canFinance)   return bounce();
+    if (matchesAny(pathname, ["/settings"])  && !canSettings)  return bounce();
   } catch {
     // Expired / invalid JWT — let the page-level auth handle it
   }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, isMarketingRole, isOwnerRole, normaliseRole } from "@/lib/auth";
+import { getCurrentUser, isOwnerRole, canAccessMarketing, normaliseRole } from "@/lib/auth";
 import { currentPeriod, periodToLabel, CHANNEL_CONFIG, ALL_CHANNELS } from "@/lib/social";
 import type { SocialChannelKey } from "@/lib/social";
 import { getMarketingProgress } from "@/app/target-actions";
@@ -21,10 +21,10 @@ const LEAD_SOURCE_EMOJI: Record<string, string> = {
 export default async function MarketingPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (!isMarketingRole(user.role) && !isOwnerRole(user.role)) redirect("/dashboard");
+  if (!canAccessMarketing(user.role, user.departments)) redirect("/dashboard");
 
   // ── Marketing employee: personal KPI dashboard ────────────────────────────
-  if (isMarketingRole(user.role) && !isOwnerRole(user.role)) {
+  if (canAccessMarketing(user.role, user.departments) && !isOwnerRole(user.role)) {
     const period = currentPeriod();
     const label  = periodToLabel(period);
     const [year, month] = period.split("-").map(Number);

@@ -11,9 +11,12 @@ import {
   verifyPassword,
   isOwnerRole,
   assignableRoles,
+  assignableDepartments,
+  assignableTiers,
+  deptsForRole,
   normaliseRole,
-  roleLabel,
   type AppRole,
+  type Department,
 } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
 import { parseCustomerFile } from "@/lib/import";
@@ -47,7 +50,7 @@ export async function login(
     return { error: "Wrong email or password." };
   }
   const rememberMe = formData.get("rememberMe") != null;
-  await createSession(user.id, user.role, rememberMe);
+  await createSession(user.id, user.role, user.departments ?? [], rememberMe);
   redirect("/dashboard");
 }
 
@@ -257,14 +260,29 @@ export async function createEmployee(
   const name = str(formData, "name");
   const email = str(formData, "email")?.toLowerCase();
   const password = str(formData, "password");
-  const rawRole = (str(formData, "role") ?? "SALES") as AppRole;
+  const actor = normaliseRole(user.role);
+  const tier = str(formData, "tier") ?? "STAFF";
 
-  // You can only create roles you're allowed to assign.
-  const allowed = assignableRoles(normaliseRole(user.role));
-  if (!allowed.includes(rawRole)) {
-    return { error: `You're not allowed to create a "${roleLabel(rawRole)}" account.` };
+  let role: AppRole;
+  let departments: Department[];
+
+  if (tier === "MANAGER" || tier === "ADMIN" || tier === "OWNER") {
+    if (!assignableTiers(actor).includes(tier as AppRole)) {
+      return { error: "You're not allowed to create that role." };
+    }
+    role = tier as AppRole;
+    departments = deptsForRole(role);
+  } else {
+    // Staff — access driven by the chosen department toggles.
+    const allowedDepts = assignableDepartments(actor);
+    const chosen = formData.getAll("dept")
+      .map((d) => d.toString())
+      .filter((d): d is Department => (allowedDepts as string[]).includes(d));
+    if (chosen.length === 0) return { error: "Pick at least one access area (Sales / Marketing / Finance)." };
+    // Primary role for labelling/targets; full access via departments.
+    role = chosen.includes("SALES") ? "SALES" : chosen.includes("MARKETING") ? "MARKETING" : "FINANCE";
+    departments = chosen;
   }
-  const role = rawRole;
 
   if (!name || !email || !password) {
     return { error: "Name, email and password are required." };
@@ -273,10 +291,30 @@ export async function createEmployee(
   if (existing) return { error: "A user with that email already exists." };
 
   await prisma.user.create({
-    data: { name, email, role, passwordHash: await hashPassword(password) },
+    data: { name, email, role, departments, passwordHash: await hashPassword(password) },
   });
   revalidatePath("/team");
   return { ok: true };
+}
+
+/** Update a staff member's department access (Sales / Marketing / Finance toggles). */
+export async function updateUserAccess(userId: string, formData: FormData): Promise<void> {
+  const user = await requireUser();
+  if (!isOwnerRole(user.role)) return;
+  const actor = normaliseRole(user.role);
+
+  const target = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (!target) return;
+  // Only staff access is toggle-driven; elevated roles get access from their role.
+  if (!["SALES", "MARKETING", "FINANCE", "EMPLOYEE"].includes(target.role)) return;
+
+  const allowedDepts = assignableDepartments(actor) as string[];
+  const chosen = formData.getAll("dept").map((d) => d.toString()).filter((d) => allowedDepts.includes(d)) as Department[];
+  if (chosen.length === 0) return;
+  const role: AppRole = chosen.includes("SALES") ? "SALES" : chosen.includes("MARKETING") ? "MARKETING" : "FINANCE";
+
+  await prisma.user.update({ where: { id: userId }, data: { role, departments: chosen } });
+  revalidatePath("/team");
 }
 
 export async function deleteEmployee(id: string): Promise<void> {

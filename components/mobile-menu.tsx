@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { AppRole } from "@/lib/auth";
+import type { Caps } from "@/components/sidebar";
 
 type NavItem = { href: string; label: string; icon: string; exact?: boolean };
 
@@ -39,7 +39,7 @@ const SETTINGS_LINK: NavItem = { href: "/settings", label: "Settings", icon: "âš
 
 type Section = { title: string; items: NavItem[] };
 
-export default function MobileMenu({ role }: { role: AppRole }) {
+export default function MobileMenu({ caps }: { caps: Caps }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -49,18 +49,11 @@ export default function MobileMenu({ role }: { role: AppRole }) {
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
-  const isManager = role === "OWNER" || role === "ADMIN" || role === "MANAGER";
-  const isAdmin   = role === "OWNER" || role === "ADMIN";
-  const isSuper   = role === "OWNER";
-
   const sections: Section[] = [];
-  if (isManager || role === "SALES" || role === "EMPLOYEE")
-    sections.push({ title: "Sales", items: SALES_LINKS });
-  if (isManager || role === "MARKETING")
-    sections.push({ title: "Marketing", items: MARKETING_LINKS });
-  if (isAdmin || role === "FINANCE")
-    sections.push({ title: "Finance", items: FINANCE_LINKS });
-  const mgmt = [...(isManager ? [TEAM_LINK] : []), ...(isSuper ? [SETTINGS_LINK] : [])];
+  if (caps.sales)     sections.push({ title: "Sales", items: SALES_LINKS });
+  if (caps.marketing) sections.push({ title: "Marketing", items: MARKETING_LINKS });
+  if (caps.finance)   sections.push({ title: "Finance", items: FINANCE_LINKS });
+  const mgmt = [...(caps.team ? [TEAM_LINK] : []), ...(caps.settings ? [SETTINGS_LINK] : [])];
   if (mgmt.length > 0)
     sections.push({ title: "Management", items: mgmt });
 

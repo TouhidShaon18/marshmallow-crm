@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentUser, roleLabel, isSuperAdminRole } from "@/lib/auth";
+import { getCurrentUser, roleLabel, isSuperAdminRole, isOwnerRole, canAccessSales, canAccessMarketing, canAccessFinance } from "@/lib/auth";
 import { logout } from "@/app/actions";
 import Sidebar from "@/components/sidebar";
 import MobileMenu from "@/components/mobile-menu";
@@ -13,13 +13,21 @@ export default async function AppLayout({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  const caps = {
+    sales:     canAccessSales(user.role, user.departments),
+    marketing: canAccessMarketing(user.role, user.departments),
+    finance:   canAccessFinance(user.role, user.departments),
+    team:      isOwnerRole(user.role),       // owner / admin / manager
+    settings:  isSuperAdminRole(user.role),
+  };
+
   return (
     <div className="flex flex-1">
-      <Sidebar role={user.role} />
+      <Sidebar caps={caps} />
       <div className="flex flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-brand-100 bg-white px-4 py-3">
           <div className="flex items-center gap-2 md:hidden">
-            <MobileMenu role={user.role} />
+            <MobileMenu caps={caps} />
             <span className="text-sm font-semibold text-brand-900">🍡 Marshmallow CRM</span>
           </div>
           <div className="ml-auto flex items-center gap-3">

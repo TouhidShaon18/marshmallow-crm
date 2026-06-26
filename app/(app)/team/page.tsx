@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, roleLabel, normaliseRole, isMarketingRole, isOwnerRole, isSuperAdminRole, assignableRoles } from "@/lib/auth";
-import { deleteEmployee } from "@/app/actions";
+import { getCurrentUser, roleLabel, normaliseRole, isMarketingRole, isOwnerRole, isSuperAdminRole, assignableDepartments, assignableTiers } from "@/lib/auth";
+import { deleteEmployee, updateUserAccess } from "@/app/actions";
 import { getTargetProgress, getMarketingProgress } from "@/app/target-actions";
 import EmployeeForm from "@/components/employee-form";
 import SetTargetForm from "@/components/set-target-form";
@@ -19,7 +19,9 @@ export default async function TeamPage() {
   if (!user) redirect("/login");
   if (!isOwnerRole(user.role)) redirect("/dashboard");
   const canSeeSettings = isSuperAdminRole(user.role);
-  const allowedRoles = assignableRoles(normaliseRole(user.role));
+  const grantDepts = assignableDepartments(normaliseRole(user.role));
+  const grantTiers = assignableTiers(normaliseRole(user.role));
+  const DEPT_LABEL: Record<string, string> = { SALES: "Sales", MARKETING: "Marketing", FINANCE: "Finance" };
 
   const period = currentPeriod();
 
@@ -30,6 +32,7 @@ export default async function TeamPage() {
       name: true,
       email: true,
       role: true,
+      departments: true,
       _count: { select: { customers: true } },
       targets: { where: { period }, take: 1 },
     },
@@ -74,7 +77,7 @@ export default async function TeamPage() {
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-700/70">
           Add a team member
         </h2>
-        <EmployeeForm allowedRoles={allowedRoles} />
+        <EmployeeForm depts={grantDepts} tiers={grantTiers} />
       </div>
 
       {/* Team list */}
@@ -92,30 +95,46 @@ export default async function TeamPage() {
           <tbody className="divide-y divide-brand-50">
             {members.map((m) => {
               const del = deleteEmployee.bind(null, m.id);
+              const isStaff = ["SALES", "MARKETING", "FINANCE", "EMPLOYEE"].includes(m.role);
+              const canEditAccess = isStaff && m.departments.every((d) => (grantDepts as string[]).includes(d));
               return (
                 <tr key={m.id}>
-                  <td className="px-4 py-3 font-medium text-brand-900">{m.name}</td>
-                  <td className="px-4 py-3 text-brand-700/80">{m.email}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`badge ${
-                        m.role === "OWNER"
-                          ? "bg-amber-100 text-amber-700"
-                          : m.role === "ADMIN"
-                          ? "bg-brand-100 text-brand-700"
-                          : m.role === "MANAGER"
-                          ? "bg-indigo-100 text-indigo-700"
-                          : m.role === "MARKETING"
-                          ? "bg-pink-100 text-pink-700"
-                          : m.role === "FINANCE"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-sky-100 text-sky-700"
-                      }`}
-                    >
-                      {roleLabel(normaliseRole(m.role))}
-                    </span>
+                  <td className="px-4 py-3 font-medium text-brand-900 align-top">{m.name}</td>
+                  <td className="px-4 py-3 text-brand-700/80 align-top">{m.email}</td>
+                  <td className="px-4 py-3 align-top">
+                    {!isStaff ? (
+                      <span
+                        className={`badge ${
+                          m.role === "OWNER"
+                            ? "bg-amber-100 text-amber-700"
+                            : m.role === "ADMIN"
+                            ? "bg-brand-100 text-brand-700"
+                            : m.role === "MANAGER"
+                            ? "bg-indigo-100 text-indigo-700"
+                            : "bg-emerald-100 text-emerald-700"
+                        }`}
+                      >
+                        {roleLabel(normaliseRole(m.role))}
+                      </span>
+                    ) : canEditAccess ? (
+                      <form action={updateUserAccess.bind(null, m.id)} className="space-y-1">
+                        <div className="flex flex-wrap gap-2">
+                          {grantDepts.map((d) => (
+                            <label key={d} className="flex items-center gap-1 text-xs text-brand-800">
+                              <input type="checkbox" name="dept" value={d} defaultChecked={m.departments.includes(d)} className="h-3.5 w-3.5 accent-brand-600" />
+                              {DEPT_LABEL[d]}
+                            </label>
+                          ))}
+                        </div>
+                        <button type="submit" className="text-xs text-brand-600 hover:underline">Save access</button>
+                      </form>
+                    ) : (
+                      <span className="text-xs text-brand-700/70">
+                        {(m.departments.length ? m.departments : ["SALES"]).map((d) => DEPT_LABEL[d] ?? d).join(", ")}
+                      </span>
+                    )}
                   </td>
-                  <td className="px-4 py-3">{m._count.customers}</td>
+                  <td className="px-4 py-3 align-top">{m._count.customers}</td>
                   <td className="px-4 py-3 text-right">
                     {m.id !== user.id && (
                       <DeleteButton

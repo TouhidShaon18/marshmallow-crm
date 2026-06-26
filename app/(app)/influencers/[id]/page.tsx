@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, isOwnerRole, isMarketingRole, normaliseRole } from "@/lib/auth";
+import { getCurrentUser, canAccessMarketing } from "@/lib/auth";
 import { deleteInfluencer, deleteDeal } from "@/app/influencer-actions";
 import AddDealForm from "@/components/add-deal-form";
 import EditInfluencerForm from "@/components/edit-influencer-form";
@@ -31,8 +31,7 @@ export default async function InfluencerDetailPage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const role = normaliseRole(user.role);
-  if (!isOwnerRole(role) && !isMarketingRole(role)) redirect("/dashboard");
+  if (!canAccessMarketing(user.role, user.departments)) redirect("/dashboard");
 
   const { id } = await params;
 

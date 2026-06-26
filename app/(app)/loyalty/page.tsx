@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, isOwnerRole, isSalesRole, normaliseRole } from "@/lib/auth";
+import { getCurrentUser, canAccessSales } from "@/lib/auth";
 import { getRank } from "@/lib/loyalty";
 
 export default async function LoyaltyPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const role = normaliseRole(user.role);
-  if (!isOwnerRole(role) && !isSalesRole(role)) redirect("/dashboard");
+  if (!canAccessSales(user.role, user.departments)) redirect("/dashboard");
 
   const customers = await prisma.customer.findMany({
     where: { stampCount: { gt: 0 } },

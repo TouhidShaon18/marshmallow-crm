@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, isMarketingRole, isOwnerRole } from "@/lib/auth";
+import { getCurrentUser, canAccessMarketing } from "@/lib/auth";
 import { deleteCampaign } from "@/app/campaign-actions";
 import CreateCampaignForm from "@/components/create-campaign-form";
 import DeleteButton from "@/components/delete-button";
@@ -20,7 +20,7 @@ function statusLabel(c: { startDate: Date | null; endDate: Date | null }) {
 export default async function CampaignsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (!isMarketingRole(user.role) && !isOwnerRole(user.role)) redirect("/dashboard");
+  if (!canAccessMarketing(user.role, user.departments)) redirect("/dashboard");
 
   const campaigns = await prisma.campaign.findMany({
     orderBy: { createdAt: "desc" },

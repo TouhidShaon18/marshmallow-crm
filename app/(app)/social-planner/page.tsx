@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, isOwnerRole, isMarketingRole, isSalesRole } from "@/lib/auth";
+import { getCurrentUser, isOwnerRole, canAccessMarketing } from "@/lib/auth";
 import {
   currentPeriod, periodToLabel, prevPeriod, nextPeriod,
 } from "@/lib/social";
@@ -17,8 +17,8 @@ export default async function SocialPlannerPage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  // Sales-only users shouldn't be here (middleware handles it, but belt-and-suspenders)
-  if (isSalesRole(user.role) && !isOwnerRole(user.role)) redirect("/dashboard");
+  // Needs marketing access (proxy also guards this).
+  if (!canAccessMarketing(user.role, user.departments)) redirect("/dashboard");
 
   const params = await searchParams;
   const period = params.month ?? currentPeriod();
@@ -26,9 +26,8 @@ export default async function SocialPlannerPage({
   const prev   = prevPeriod(period);
   const next   = nextPeriod(period);
 
-  // Marketing employees can VIEW and log posts — only owner can create/delete/generate
+  // Marketing employees can VIEW and log posts — only managers/admins create/generate.
   const isManagerView = isOwnerRole(user.role); // kept for template/generate controls
-  const canView = isOwnerRole(user.role) || isMarketingRole(user.role);
 
   // Fetch posts for this period
   const postsRaw = await prisma.socialPost.findMany({

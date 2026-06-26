@@ -115,6 +115,9 @@ model User {
   email        String           @unique
   passwordHash String
   role         Role             @default(EMPLOYEE)
+  // Which department sections a (non-elevated) user can access: SALES / MARKETING / FINANCE.
+  // Owner/Admin/Manager get access from their role; this drives staff with custom combos.
+  departments  String[]         @default([])
   createdAt    DateTime         @default(now())
 
   customers        Customer[]        @relation("AssignedCustomers")

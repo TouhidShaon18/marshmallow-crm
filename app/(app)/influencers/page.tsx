@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser, isOwnerRole, isMarketingRole, normaliseRole } from "@/lib/auth";
+import { getCurrentUser, canAccessMarketing } from "@/lib/auth";
 
 const PLATFORM_ICON: Record<string, string> = {
   INSTAGRAM: "📸", TIKTOK: "🎵", YOUTUBE: "▶️",
@@ -21,8 +21,7 @@ const PLATFORM_COLOR: Record<string, string> = {
 export default async function InfluencersPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const role = normaliseRole(user.role);
-  if (!isOwnerRole(role) && !isMarketingRole(role)) redirect("/dashboard");
+  if (!canAccessMarketing(user.role, user.departments)) redirect("/dashboard");
 
   const influencers = await prisma.influencer.findMany({
     orderBy: { createdAt: "desc" },

@@ -1,27 +1,31 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { createEmployee } from "@/app/actions";
 
-const ROLE_OPTIONS: { value: string; label: string }[] = [
-  { value: "SALES",     label: "🛍️ Sales — customers, follow-ups, pipeline" },
-  { value: "MARKETING", label: "📣 Marketing — broadcasts, campaigns, affiliates" },
-  { value: "FINANCE",   label: "💰 Finance — P&L entries, financial dashboard" },
-  { value: "MANAGER",   label: "🧭 Sales & Marketing Manager — all Sales + Marketing" },
-  { value: "ADMIN",     label: "🛡️ Admin — full access, except API keys & integrations" },
-  { value: "OWNER",     label: "👑 Super Admin — full access incl. API keys & integrations" },
-];
+const DEPT_LABEL: Record<string, string> = {
+  SALES: "🛍️ Sales", MARKETING: "📣 Marketing", FINANCE: "💰 Finance",
+};
+const TIER_LABEL: Record<string, string> = {
+  MANAGER: "🧭 Sales & Marketing Manager",
+  ADMIN: "🛡️ Admin (no API keys / integrations)",
+  OWNER: "👑 Super Admin (full access)",
+};
 
-export default function EmployeeForm({ allowedRoles }: { allowedRoles: string[] }) {
+export default function EmployeeForm({
+  depts,
+  tiers,
+}: {
+  depts: string[]; // department areas the creator can grant
+  tiers: string[]; // elevated tiers the creator can assign (MANAGER/ADMIN/OWNER)
+}) {
   const [state, action, pending] = useActionState(createEmployee, {});
+  const [tier, setTier] = useState("STAFF");
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (state?.ok) formRef.current?.reset();
+    if (state?.ok) { formRef.current?.reset(); setTier("STAFF"); }
   }, [state?.ok]);
-
-  const options = ROLE_OPTIONS.filter((o) => allowedRoles.includes(o.value));
-  const showsElevated = allowedRoles.some((r) => ["MANAGER", "ADMIN", "OWNER"].includes(r));
 
   return (
     <form ref={formRef} action={action} className="space-y-3">
@@ -39,19 +43,32 @@ export default function EmployeeForm({ allowedRoles }: { allowedRoles: string[] 
           <input name="password" required minLength={6} className="input" />
         </div>
         <div>
-          <label className="label">Role</label>
-          <select name="role" className="input" defaultValue="SALES">
-            {options.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+          <label className="label">Team member type</label>
+          <select name="tier" value={tier} onChange={(e) => setTier(e.target.value)} className="input">
+            <option value="STAFF">👤 Staff — pick access areas below</option>
+            {tiers.map((t) => (
+              <option key={t} value={t}>{TIER_LABEL[t]}</option>
             ))}
           </select>
-          {showsElevated && (
-            <p className="mt-1 text-xs text-brand-700/50">
-              A Manager runs all Sales &amp; Marketing (and their people) but not Finance or integrations.
-            </p>
-          )}
         </div>
       </div>
+
+      {tier === "STAFF" && (
+        <div>
+          <label className="label">Access areas</label>
+          <div className="flex flex-wrap gap-3 rounded-lg border border-brand-100 bg-brand-50 px-4 py-3">
+            {depts.map((d) => (
+              <label key={d} className="flex items-center gap-2 text-sm text-brand-800">
+                <input type="checkbox" name="dept" value={d} defaultChecked={d === "SALES"} className="h-4 w-4 accent-brand-600" />
+                {DEPT_LABEL[d] ?? d}
+              </label>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-brand-700/50">
+            Tick every area this person should access — e.g. both Sales and Marketing.
+          </p>
+        </div>
+      )}
 
       {state?.error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{state.error}</p>
